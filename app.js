@@ -4,10 +4,10 @@
 const BOOKSY_URL =
   "https://booksy.com/es-es/90583_el-coliseum_barberia_59555_plasencia";
 
-// ⚠️ Pon aquí TU número (con prefijo). Ejemplo España: "346XXXXXXXX"
-const WHATSAPP_NUMBER = ""; // <-- rellena esto
+// ⚠️ Pon aquí TU número (con prefijo). Ejemplo España: "346XXXXXXX"
+const WHATSAPP_NUMBER = "34617494566"; // <-- rellena esto
 
-// Horarios (puedes cambiarlo)
+// Horarios
 const HOURS = {
   // 0 = domingo, 6 = sábado
   default: [
@@ -18,7 +18,32 @@ const HOURS = {
   sunday: [], // cerrado
 };
 
-const SLOT_STEP_MIN = 30;
+// Paso entre horas mostradas (15 min porque tienes servicios de 15/20/45)
+const SLOT_STEP_MIN = 15;
+
+// Servicios “como Booksy”
+const SERVICE_META = {
+  "Corte degradado": { duration: 30, price: 12.5 },
+  "Recorte de la barba": { duration: 15, price: 6.0 },
+  Rapado: { duration: 15, price: 6.0 },
+  "Corte clásico": { duration: 15, price: 10.0 },
+  "Pelo y barba": { duration: 45, price: 16.0 },
+  "Rapado y barba": { duration: 15, price: 10.0 },
+  "Corte niño hasta 5 años": { duration: 20, price: 10.0 },
+  "Degradado + diseño + cejas": { duration: 30, price: 15.0 },
+  "Pelo y barba, cejas y diseño": { duration: 45, price: 20.0 },
+};
+
+function getServiceDuration(serviceName) {
+  return SERVICE_META[serviceName]?.duration ?? 30;
+}
+function getServicePrice(serviceName) {
+  return SERVICE_META[serviceName]?.price ?? null;
+}
+function formatEuro(value) {
+  if (value === null || value === undefined) return "";
+  return value.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "€";
+}
 
 // =====================
 // Helpers
@@ -46,7 +71,6 @@ function minutesToTime(min) {
   return `${pad2(h)}:${pad2(m)}`;
 }
 function niceSpanishDate(iso) {
-  // iso "YYYY-MM-DD"
   const [y, mo, d] = iso.split("-").map(Number);
   const date = new Date(y, mo - 1, d);
   return date.toLocaleDateString("es-ES", {
@@ -63,14 +87,16 @@ function getRangesForDate(date) {
   return HOURS.default;
 }
 
-function generateSlotsForDate(date) {
+// Genera slots teniendo en cuenta duración del servicio
+function generateSlotsForDate(date, durationMin) {
   const ranges = getRangesForDate(date);
   const slots = [];
+
   for (const r of ranges) {
     let start = parseTimeToMinutes(r.start);
     const end = parseTimeToMinutes(r.end);
 
-    while (start + SLOT_STEP_MIN <= end) {
+    while (start + durationMin <= end) {
       slots.push(minutesToTime(start));
       start += SLOT_STEP_MIN;
     }
@@ -97,11 +123,9 @@ revealEls.forEach((el) => io.observe(el));
 // =====================
 const btn = document.getElementById("btn");
 const msg = document.getElementById("msg");
-btn.addEventListener("click", () => {
-  msg.textContent = "🔥 Dale a “Agendar cita” y reserva en 20 segundos. ¡Nos vemos en EL COLISEUM! ⚔️";
-  msg.classList.remove("glow");
-  void msg.offsetWidth; // reflow
-  msg.classList.add("glow");
+btn?.addEventListener("click", () => {
+  msg.textContent =
+    "🔥 Dale a “Agendar cita” y reserva en 20 segundos. ¡Nos vemos en EL COLISEUM! ⚔️";
 });
 
 // =====================
@@ -138,21 +162,56 @@ function todayStart() {
   t.setHours(0, 0, 0, 0);
   return t;
 }
-
 function isPast(date) {
   const t = todayStart();
   const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   return d < t;
 }
-
 function isClosed(date) {
   const day = date.getDay();
-  if (day === 0) return true; // domingo
-  return false;
+  return day === 0; // domingo cerrado
 }
 
+// =====================
+// Local storage
+// =====================
+function loadAppointments() {
+  try {
+    return JSON.parse(localStorage.getItem("coliseumAppointments") || "[]");
+  } catch {
+    return [];
+  }
+}
+function saveAppointments(list) {
+  localStorage.setItem("coliseumAppointments", JSON.stringify(list));
+}
+
+// Overlap real (según duración)
+function apptToInterval(appt) {
+  const start = parseTimeToMinutes(appt.time);
+  const dur = appt.duration ?? getServiceDuration(appt.service);
+  return { start, end: start + dur };
+}
+
+function hasOverlap(newAppt) {
+  const list = loadAppointments();
+  const n = apptToInterval(newAppt);
+
+  return list.some((a) => {
+    if (a.date !== newAppt.date) return false;
+    const o = apptToInterval(a);
+    return n.start < o.end && n.end > o.start; // solape
+  });
+}
+
+// =====================
+// Calendar render
+// =====================
 function renderCalendar() {
-  const monthName = view.toLocaleDateString("es-ES", { month: "long", year: "numeric" });
+  const monthName = view.toLocaleDateString("es-ES", {
+    month: "long",
+    year: "numeric",
+  });
   monthLabel.textContent = monthName[0].toUpperCase() + monthName.slice(1);
 
   grid.innerHTML = "";
@@ -160,10 +219,9 @@ function renderCalendar() {
   const firstDayOfMonth = new Date(view.getFullYear(), view.getMonth(), 1);
   const lastDayOfMonth = new Date(view.getFullYear(), view.getMonth() + 1, 0);
 
-  // Queremos semanas empezando en lunes. JS: domingo=0.
-  // Calculamos cuántos "huecos" antes del día 1.
-  const jsDay = firstDayOfMonth.getDay(); // 0..6
-  const mondayIndex = (jsDay + 6) % 7; // convierte para que lunes=0
+  // semana empieza lunes
+  const jsDay = firstDayOfMonth.getDay();
+  const mondayIndex = (jsDay + 6) % 7;
   const blanks = mondayIndex;
 
   for (let i = 0; i < blanks; i++) {
@@ -178,7 +236,6 @@ function renderCalendar() {
 
   for (let d = 1; d <= lastDayOfMonth.getDate(); d++) {
     const date = new Date(view.getFullYear(), view.getMonth(), d);
-
     const cell = document.createElement("div");
     cell.className = "day";
     cell.textContent = String(d);
@@ -187,7 +244,8 @@ function renderCalendar() {
     if (off) cell.classList.add("day--off");
 
     if (sameDay(date, today)) cell.classList.add("day--today");
-    if (selectedDate && sameDay(date, selectedDate)) cell.classList.add("day--selected");
+    if (selectedDate && sameDay(date, selectedDate))
+      cell.classList.add("day--selected");
 
     cell.addEventListener("click", () => {
       if (off) return;
@@ -205,8 +263,12 @@ function renderCalendar() {
   }
 }
 
+// =====================
+// Times
+// =====================
 function populateTimes() {
   timeSelect.innerHTML = "";
+
   if (!selectedDate) {
     const opt = document.createElement("option");
     opt.textContent = "Elige un día primero";
@@ -216,7 +278,30 @@ function populateTimes() {
     return;
   }
 
-  const slots = generateSlotsForDate(selectedDate);
+  const service = serviceSelect.value;
+  const durationMin = getServiceDuration(service);
+
+  let slots = generateSlotsForDate(selectedDate, durationMin);
+
+  // filtrar slots ocupados por solape
+  const dateISO = toISODate(selectedDate);
+  const existing = loadAppointments().filter((a) => a.date === dateISO);
+
+  slots = slots.filter((time) => {
+    const probe = {
+      date: dateISO,
+      time,
+      service,
+      duration: durationMin,
+    };
+    // si aún no hay servicio elegido, no filtramos fuerte
+    if (!service) return true;
+    return !existing.some((a) => {
+      const n = apptToInterval(probe);
+      const o = apptToInterval(a);
+      return n.start < o.end && n.end > o.start;
+    });
+  });
 
   if (slots.length === 0) {
     const opt = document.createElement("option");
@@ -228,7 +313,7 @@ function populateTimes() {
   }
 
   const first = document.createElement("option");
-  first.textContent = "Selecciona una hora";
+  first.textContent = service ? "Selecciona una hora" : "Selecciona un servicio primero";
   first.value = "";
   first.disabled = true;
   first.selected = true;
@@ -242,6 +327,13 @@ function populateTimes() {
   });
 }
 
+serviceSelect.addEventListener("change", () => {
+  if (selectedDate) populateTimes();
+});
+
+// =====================
+// Alerts
+// =====================
 function setAlert(text, type) {
   alertBox.textContent = text || "";
   alertBox.classList.remove("alert--ok", "alert--bad");
@@ -249,22 +341,11 @@ function setAlert(text, type) {
   if (type === "bad") alertBox.classList.add("alert--bad");
 }
 
-function loadAppointments() {
-  try {
-    return JSON.parse(localStorage.getItem("coliseumAppointments") || "[]");
-  } catch {
-    return [];
-  }
-}
-
-function saveAppointments(list) {
-  localStorage.setItem("coliseumAppointments", JSON.stringify(list));
-}
-
+// =====================
+// Appointments UI
+// =====================
 function renderAppointments() {
   const list = loadAppointments();
-
-  // ordenar por fecha/hora
   list.sort((a, b) => {
     const da = new Date(`${a.date}T${a.time}:00`);
     const db = new Date(`${b.date}T${b.time}:00`);
@@ -290,13 +371,14 @@ function renderAppointments() {
     const li = document.createElement("li");
     li.className = "appt";
 
-    const desc = `${niceSpanishDate(a.date)} · ${a.time} · ${a.service}`;
+    const priceTxt = a.price != null ? ` · ${formatEuro(a.price)}` : "";
+    const durTxt = a.duration ? ` · ${a.duration} min` : "";
     const extra = a.notes ? ` · Nota: ${a.notes}` : "";
 
     li.innerHTML = `
       <div class="appt__left">
         <div class="appt__title">${a.name}</div>
-        <div class="appt__meta">${desc}${extra}</div>
+        <div class="appt__meta">${niceSpanishDate(a.date)} · ${a.time} · ${a.service}${priceTxt}${durTxt}${extra}</div>
       </div>
       <div class="appt__actions">
         <button class="smallBtn" data-action="ics">.ics</button>
@@ -313,19 +395,15 @@ function renderAppointments() {
       saveAppointments(next);
       renderAppointments();
       setAlert("Cita eliminada.", "ok");
+      populateTimes();
     });
 
     apptList.appendChild(li);
   });
 }
 
-function hasConflict(newAppt) {
-  const list = loadAppointments();
-  return list.some((a) => a.date === newAppt.date && a.time === newAppt.time);
-}
-
 // =====================
-// ICS (calendar) download
+// ICS download
 // =====================
 function downloadTextFile(filename, content, mime) {
   const blob = new Blob([content], { type: mime });
@@ -338,27 +416,17 @@ function downloadTextFile(filename, content, mime) {
   a.remove();
   URL.revokeObjectURL(url);
 }
-
 function toICSDateTime(dateISO, timeHHMM) {
-  // local time -> format YYYYMMDDTHHMM00
   const [y, m, d] = dateISO.split("-").map(Number);
   const [hh, mm] = timeHHMM.split(":").map(Number);
-
   const dt = new Date(y, m - 1, d, hh, mm, 0);
-  const YYYY = dt.getFullYear();
-  const MM = pad2(dt.getMonth() + 1);
-  const DD = pad2(dt.getDate());
-  const H = pad2(dt.getHours());
-  const Min = pad2(dt.getMinutes());
-  return `${YYYY}${MM}${DD}T${H}${Min}00`;
+  return `${dt.getFullYear()}${pad2(dt.getMonth() + 1)}${pad2(dt.getDate())}T${pad2(dt.getHours())}${pad2(dt.getMinutes())}00`;
 }
 
 function downloadICS(appt) {
   const dtStart = toICSDateTime(appt.date, appt.time);
-  // duración simple según servicio
-  const durationMin =
-    appt.service === "Corte + Barba" ? 60 :
-    appt.service === "Arreglo + Detalles" ? 20 : 30;
+
+  const durationMin = appt.duration ?? getServiceDuration(appt.service);
 
   const [y, mo, d] = appt.date.split("-").map(Number);
   const [hh, mm] = appt.time.split(":").map(Number);
@@ -369,10 +437,18 @@ function downloadICS(appt) {
 
   const uid = `${appt.id}@elcoliseum`;
   const now = new Date();
-  const stamp = `${now.getFullYear()}${pad2(now.getMonth()+1)}${pad2(now.getDate())}T${pad2(now.getHours())}${pad2(now.getMinutes())}${pad2(now.getSeconds())}`;
+  const stamp = `${now.getFullYear()}${pad2(now.getMonth() + 1)}${pad2(now.getDate())}T${pad2(now.getHours())}${pad2(now.getMinutes())}${pad2(now.getSeconds())}`;
 
-  const summary = `Cita - EL COLISEUM (${appt.service})`;
-  const description = `Cliente: ${appt.name}\\nTeléfono: ${appt.phone}${appt.notes ? `\\nNota: ${appt.notes}` : ""}\\nBooksy: ${BOOKSY_URL}`;
+  const priceTxt = appt.price != null ? ` (${formatEuro(appt.price)})` : "";
+  const summary = `Cita - EL COLISEUM (${appt.service}${priceTxt})`;
+
+  const description =
+    `Cliente: ${appt.name}\\n` +
+    `Teléfono: ${appt.phone}\\n` +
+    `Servicio: ${appt.service}${priceTxt}\\n` +
+    `Duración: ${durationMin} min\\n` +
+    (appt.notes ? `Nota: ${appt.notes}\\n` : "") +
+    `Booksy: ${BOOKSY_URL}`;
 
   const ics =
 `BEGIN:VCALENDAR
@@ -394,22 +470,26 @@ END:VCALENDAR`;
 }
 
 // =====================
-// WhatsApp message
+// WhatsApp
 // =====================
 function buildWhatsAppLink(appt) {
-  const msg = `Hola! Quiero reservar en EL COLISEUM.%0A` +
-    `Nombre: ${encodeURIComponent(appt.name)}%0A` +
-    `Teléfono: ${encodeURIComponent(appt.phone)}%0A` +
-    `Servicio: ${encodeURIComponent(appt.service)}%0A` +
-    `Día: ${encodeURIComponent(niceSpanishDate(appt.date))}%0A` +
-    `Hora: ${encodeURIComponent(appt.time)}%0A` +
-    (appt.notes ? `Nota: ${encodeURIComponent(appt.notes)}%0A` : "") +
-    `Gracias!`;
-
   const number = (WHATSAPP_NUMBER || "").replace(/\D/g, "");
   if (!number) return null;
 
-  return `https://wa.me/${number}?text=${msg}`;
+  const priceTxt = appt.price != null ? ` (${formatEuro(appt.price)})` : "";
+
+  const text =
+    `Hola! Quiero reservar en EL COLISEUM.%0A` +
+    `Nombre: ${encodeURIComponent(appt.name)}%0A` +
+    `Teléfono: ${encodeURIComponent(appt.phone)}%0A` +
+    `Servicio: ${encodeURIComponent(appt.service + priceTxt)}%0A` +
+    `Día: ${encodeURIComponent(niceSpanishDate(appt.date))}%0A` +
+    `Hora: ${encodeURIComponent(appt.time)}%0A` +
+    `Duración: ${encodeURIComponent(String(appt.duration || getServiceDuration(appt.service)) + " min")}%0A` +
+    (appt.notes ? `Nota: ${encodeURIComponent(appt.notes)}%0A` : "") +
+    `Gracias!`;
+
+  return `https://wa.me/${number}?text=${text}`;
 }
 
 function enablePostCreateActions(appt) {
@@ -469,6 +549,9 @@ form.addEventListener("submit", (e) => {
     return;
   }
 
+  const duration = getServiceDuration(service);
+  const price = getServicePrice(service);
+
   const appt = {
     id: crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()),
     name,
@@ -477,11 +560,13 @@ form.addEventListener("submit", (e) => {
     notes,
     date,
     time,
+    duration,
+    price,
     createdAt: new Date().toISOString(),
   };
 
-  if (hasConflict(appt)) {
-    setAlert("Esa hora ya está ocupada (en este dispositivo). Elige otra.", "bad");
+  if (hasOverlap(appt)) {
+    setAlert("Ese horario se solapa con otra cita guardada. Elige otra hora.", "bad");
     return;
   }
 
@@ -493,17 +578,35 @@ form.addEventListener("submit", (e) => {
   enablePostCreateActions(appt);
 
   setAlert("Cita guardada ✅ Ahora puedes enviarla por WhatsApp o descargar el recordatorio (.ics).", "ok");
+
+  // refrescar horas para marcar ocupadas
+  populateTimes();
+});
+
+// Botones "Reservar" desde tarjetas de servicio
+document.querySelectorAll(".serviceBtn").forEach((b) => {
+  b.addEventListener("click", () => {
+    const service = b.getAttribute("data-service");
+    if (!service) return;
+
+    serviceSelect.value = service;
+    if (selectedDate) populateTimes();
+
+    // scroll al bloque de reservas
+    document.getElementById("reservar")?.scrollIntoView({ behavior: "smooth" });
+    setAlert(`Servicio seleccionado: ${service}. Ahora elige día y hora.`, "ok");
+  });
 });
 
 // =====================
 // Init
 // =====================
 renderCalendar();
-populateTimes();
 renderAppointments();
+populateTimes();
 
 // Auto-select hoy si está abierto
-(function autoSelectToday(){
+(function autoSelectToday() {
   const t = new Date();
   if (!isPast(t) && !isClosed(t)) {
     selectedDate = t;

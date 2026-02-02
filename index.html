@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>EL COLISEUM BARBERSHOP</title>
 
-    <link rel="stylesheet" href="style.css" />
+    <!-- cache-busting: sube el número si no se actualiza -->
+    <link rel="stylesheet" href="style.css?v=3" />
   </head>
 
   <body>
@@ -76,43 +77,134 @@
         <div class="container">
           <div class="section__head reveal">
             <h2>Servicios</h2>
-            <p class="muted">Elige tu combo. (Puedes editar nombres y precios cuando quieras)</p>
+            <p class="muted">Elige tu servicio (según Booksy). Puedes pulsar “Reservar” para seleccionar y bajar al calendario.</p>
           </div>
 
+          <!-- GRID SERVICIOS (Booksy) -->
           <div class="cards">
             <article class="card reveal">
-              <h3>Corte</h3>
-              <p class="muted">Corte clásico / degradado / estilo personalizado.</p>
+              <h3>Corte degradado</h3>
+              <p class="muted">Degradado / estilo personalizado.</p>
               <div class="card__row">
                 <span class="pill">30 min</span>
-                <span class="price">12.50€</span>
+                <span class="price">12,50€</span>
+              </div>
+              <div class="card__actions">
+                <button class="btn btn--secondary btn--small serviceBtn" type="button" data-service="Corte degradado">
+                  Reservar
+                </button>
               </div>
             </article>
 
             <article class="card reveal">
-              <h3>Barba</h3>
-              <p class="muted">Perfilado + cuidado para dejarla perfecta.</p>
+              <h3>Recorte de la barba</h3>
+              <p class="muted">Perfilado rápido + acabado limpio.</p>
               <div class="card__row">
                 <span class="pill">15 min</span>
-                <span class="price">6.00€</span>
+                <span class="price">6,00€</span>
+              </div>
+              <div class="card__actions">
+                <button class="btn btn--secondary btn--small serviceBtn" type="button" data-service="Recorte de la barba">
+                  Reservar
+                </button>
               </div>
             </article>
 
             <article class="card reveal">
-              <h3>Corte + Barba</h3>
-              <p class="muted">El completo. Salir fino es obligatorio.</p>
+              <h3>Rapado</h3>
+              <p class="muted">Rapado limpio y rápido.</p>
+              <div class="card__row">
+                <span class="pill">15 min</span>
+                <span class="price">6,00€</span>
+              </div>
+              <div class="card__actions">
+                <button class="btn btn--secondary btn--small serviceBtn" type="button" data-service="Rapado">
+                  Reservar
+                </button>
+              </div>
+            </article>
+
+            <article class="card reveal">
+              <h3>Corte clásico</h3>
+              <p class="muted">Corte clásico de toda la vida.</p>
+              <div class="card__row">
+                <span class="pill">15 min</span>
+                <span class="price">10,00€</span>
+              </div>
+              <div class="card__actions">
+                <button class="btn btn--secondary btn--small serviceBtn" type="button" data-service="Corte clásico">
+                  Reservar
+                </button>
+              </div>
+            </article>
+
+            <article class="card reveal">
+              <h3>Pelo y barba</h3>
+              <p class="muted">El completo: corte + barba.</p>
               <div class="card__row">
                 <span class="pill">45 min</span>
-                <span class="price">16.00€</span>
+                <span class="price">16,00€</span>
+              </div>
+              <div class="card__actions">
+                <button class="btn btn--secondary btn--small serviceBtn" type="button" data-service="Pelo y barba">
+                  Reservar
+                </button>
               </div>
             </article>
 
             <article class="card reveal">
-              <h3>Arreglo + Detalles</h3>
-              <p class="muted">Line-up, cejas o retoque rápido.</p>
+              <h3>Rapado y barba</h3>
+              <p class="muted">Rapado + barba en un toque.</p>
               <div class="card__row">
-                <span class="pill">15–20 min</span>
-                <span class="price">€</span>
+                <span class="pill">15 min</span>
+                <span class="price">10,00€</span>
+              </div>
+              <div class="card__actions">
+                <button class="btn btn--secondary btn--small serviceBtn" type="button" data-service="Rapado y barba">
+                  Reservar
+                </button>
+              </div>
+            </article>
+
+            <article class="card reveal">
+              <h3>Corte niño hasta 5 años</h3>
+              <p class="muted">Corte para peques (hasta 5 años).</p>
+              <div class="card__row">
+                <span class="pill">20 min</span>
+                <span class="price">10,00€</span>
+              </div>
+              <div class="card__actions">
+                <button class="btn btn--secondary btn--small serviceBtn" type="button" data-service="Corte niño hasta 5 años">
+                  Reservar
+                </button>
+              </div>
+            </article>
+
+            <article class="card reveal">
+              <h3>Degradado + diseño + cejas</h3>
+              <p class="muted">Degradado con diseño + cejas.</p>
+              <div class="card__row">
+                <span class="pill">30 min</span>
+                <span class="price">15,00€</span>
+              </div>
+              <div class="card__actions">
+                <button class="btn btn--secondary btn--small serviceBtn" type="button" data-service="Degradado + diseño + cejas">
+                  Reservar
+                </button>
+              </div>
+            </article>
+
+            <article class="card reveal">
+              <h3>Pelo y barba, cejas y diseño</h3>
+              <p class="muted">Completo + cejas + diseño.</p>
+              <div class="card__row">
+                <span class="pill">45 min</span>
+                <span class="price">20,00€</span>
+              </div>
+              <div class="card__actions">
+                <button class="btn btn--secondary btn--small serviceBtn" type="button" data-service="Pelo y barba, cejas y diseño">
+                  Reservar
+                </button>
               </div>
             </article>
           </div>
@@ -170,10 +262,15 @@
                   Servicio
                   <select id="service" required>
                     <option value="" selected disabled>Selecciona un servicio</option>
-                    <option value="Corte">Corte (30 min)</option>
-                    <option value="Barba">Barba (30 min)</option>
-                    <option value="Corte + Barba">Corte + Barba (60 min)</option>
-                    <option value="Arreglo + Detalles">Arreglo + Detalles (15–20 min)</option>
+                    <option value="Corte degradado">Corte degradado · 12,50€ · 30 min</option>
+                    <option value="Recorte de la barba">Recorte de la barba · 6,00€ · 15 min</option>
+                    <option value="Rapado">Rapado · 6,00€ · 15 min</option>
+                    <option value="Corte clásico">Corte clásico · 10,00€ · 15 min</option>
+                    <option value="Pelo y barba">Pelo y barba · 16,00€ · 45 min</option>
+                    <option value="Rapado y barba">Rapado y barba · 10,00€ · 15 min</option>
+                    <option value="Corte niño hasta 5 años">Corte niño hasta 5 años · 10,00€ · 20 min</option>
+                    <option value="Degradado + diseño + cejas">Degradado + diseño + cejas · 15,00€ · 30 min</option>
+                    <option value="Pelo y barba, cejas y diseño">Pelo y barba, cejas y diseño · 20,00€ · 45 min</option>
                   </select>
                 </label>
 
@@ -214,7 +311,6 @@
                 <button class="miniLink" id="downloadIcsBtn" type="button" disabled>Descargar recordatorio (.ics)</button>
               </div>
 
-              <!-- hidden real date value -->
               <input id="dateValue" type="hidden" />
             </form>
           </div>
@@ -224,7 +320,9 @@
             <div class="container">
               <div class="section__head reveal">
                 <h3>Mis próximas citas (en este dispositivo)</h3>
-                <p class="muted">Esto se guarda en tu navegador. Si quieres un sistema “real” con base de datos, lo conectamos a un servicio externo.</p>
+                <p class="muted">
+                  Esto se guarda en tu navegador. Si quieres un sistema “real” con base de datos, lo conectamos a un servicio externo.
+                </p>
               </div>
 
               <ul class="apptList reveal" id="apptList"></ul>
@@ -289,6 +387,7 @@
       </div>
     </footer>
 
-    <script src="app.js"></script>
+    <!-- cache-busting: sube el número si no se actualiza -->
+    <script src="app.js?v=3"></script>
   </body>
 </html>

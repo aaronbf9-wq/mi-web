@@ -244,6 +244,13 @@ a:hover{ opacity:0.92; }
   justify-content:space-between;
   margin-top: 12px;
 }
+
+.card__actions{
+  margin-top: 12px;
+  display:flex;
+  justify-content:flex-end;
+}
+
 .pill{
   font-size: 12px;
   color: var(--muted);

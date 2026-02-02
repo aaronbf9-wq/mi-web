@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>EL COLISEUM BARBERSHOP</title>
+
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <header class="topbar">
+      <div class="container topbar__inner">
+        <div class="brand">
+          <div class="brand__mark">⚔️</div>
+          <div class="brand__text">
+            <div class="brand__title">EL COLISEUM</div>
+            <div class="brand__subtitle">Barbershop</div>
+          </div>
+        </div>
+
+        <nav class="nav">
+          <a href="#inicio">Inicio</a>
+          <a href="#servicios">Servicios</a>
+          <a href="#reservar">Reservar</a>
+          <a href="#contacto">Contacto</a>
+        </nav>
+
+        <a class="btn btn--primary btn--small" href="#reservar">Reservar</a>
+      </div>
+    </header>
+
+    <main id="inicio">
+      <!-- HERO -->
+      <section class="hero">
+        <div class="container hero__grid">
+          <div class="hero__content reveal">
+            <p class="badge">🔥 Barbería para hombres 🔥</p>
+            <h1 class="title">EL COLISEUM</h1>
+            <p class="subtitle">
+              No es una simple barbería: <strong>esto es una FAMILIA</strong>. Corte, barba y estilo con actitud.
+            </p>
+
+            <div class="hero__cta">
+              <a class="btn btn--primary" href="#reservar">Agendar cita</a>
+              <a
+                class="btn btn--ghost"
+                href="https://booksy.com/es-es/90583_el-coliseum_barberia_59555_plasencia"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Reservar en Booksy
+              </a>
+            </div>
+
+            <div class="hero__note">
+              <span class="dot"></span>
+              <span>Confirmación por WhatsApp + recordatorio para tu calendario</span>
+            </div>
+          </div>
+
+          <div class="hero__media reveal">
+            <div class="mediaFrame">
+              <img
+                src="https://d375139ucebi94.cloudfront.net/region2/es/90583/biz_photo/5f911b2f750447edabbd093ec191ed-el-coliseum-biz-photo-deba6456f9fd41799eeb8d41bc45fe-booksy.jpeg"
+                alt="EL COLISEUM"
+                loading="lazy"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SERVICIOS -->
+      <section class="section" id="servicios">
+        <div class="container">
+          <div class="section__head reveal">
+            <h2>Servicios</h2>
+            <p class="muted">Elige tu combo. (Puedes editar nombres y precios cuando quieras)</p>
+          </div>
+
+          <div class="cards">
+            <article class="card reveal">
+              <h3>Corte</h3>
+              <p class="muted">Corte clásico / degradado / estilo personalizado.</p>
+              <div class="card__row">
+                <span class="pill">30 min</span>
+                <span class="price">€</span>
+              </div>
+            </article>
+
+            <article class="card reveal">
+              <h3>Barba</h3>
+              <p class="muted">Perfilado + cuidado para dejarla perfecta.</p>
+              <div class="card__row">
+                <span class="pill">30 min</span>
+                <span class="price">€</span>
+              </div>
+            </article>
+
+            <article class="card reveal">
+              <h3>Corte + Barba</h3>
+              <p class="muted">El completo. Salir fino es obligatorio.</p>
+              <div class="card__row">
+                <span class="pill">60 min</span>
+                <span class="price">€€</span>
+              </div>
+            </article>
+
+            <article class="card reveal">
+              <h3>Arreglo + Detalles</h3>
+              <p class="muted">Line-up, cejas o retoque rápido.</p>
+              <div class="card__row">
+                <span class="pill">15–20 min</span>
+                <span class="price">€</span>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- RESERVAS -->
+      <section class="section" id="reservar">
+        <div class="container">
+          <div class="section__head reveal">
+            <h2>Agenda tu cita</h2>
+            <p class="muted">Selecciona día y hora. Se guardará en este dispositivo y puedes enviarla por WhatsApp.</p>
+          </div>
+
+          <div class="booking">
+            <!-- CALENDARIO -->
+            <div class="calendar reveal" aria-label="Calendario">
+              <div class="calendar__top">
+                <button class="iconBtn" id="prevMonth" type="button" aria-label="Mes anterior">‹</button>
+                <div class="calendar__label" id="monthLabel">Mes</div>
+                <button class="iconBtn" id="nextMonth" type="button" aria-label="Mes siguiente">›</button>
+              </div>
+
+              <div class="calendar__weekdays" aria-hidden="true">
+                <div>L</div><div>M</div><div>X</div><div>J</div><div>V</div><div>S</div><div>D</div>
+              </div>
+
+              <div class="calendar__grid" id="calendarGrid"></div>
+
+              <div class="calendar__hint muted">
+                <span class="legend">
+                  <span class="legendDot legendDot--ok"></span> Disponible
+                </span>
+                <span class="legend">
+                  <span class="legendDot legendDot--off"></span> Cerrado / pasado
+                </span>
+              </div>
+            </div>
+
+            <!-- FORM -->
+            <form class="form reveal" id="bookingForm">
+              <div class="form__row">
+                <label>
+                  Nombre
+                  <input id="name" type="text" placeholder="Tu nombre" required />
+                </label>
+                <label>
+                  Teléfono
+                  <input id="phone" type="tel" placeholder="Ej: 6XXXXXXXX" required />
+                </label>
+              </div>
+
+              <div class="form__row">
+                <label>
+                  Servicio
+                  <select id="service" required>
+                    <option value="" selected disabled>Selecciona un servicio</option>
+                    <option value="Corte">Corte (30 min)</option>
+                    <option value="Barba">Barba (30 min)</option>
+                    <option value="Corte + Barba">Corte + Barba (60 min)</option>
+                    <option value="Arreglo + Detalles">Arreglo + Detalles (15–20 min)</option>
+                  </select>
+                </label>
+
+                <label>
+                  Hora disponible
+                  <select id="time" required>
+                    <option value="" selected disabled>Elige un día primero</option>
+                  </select>
+                </label>
+              </div>
+
+              <label>
+                Nota (opcional)
+                <input id="notes" type="text" placeholder="Ej: degradado medio / barba corta..." />
+              </label>
+
+              <div class="form__selected">
+                <div>
+                  <div class="muted">Día seleccionado</div>
+                  <div class="big" id="selectedDateText">—</div>
+                </div>
+                <div class="form__actions">
+                  <button class="btn btn--primary" type="submit">Confirmar cita</button>
+                  <button class="btn btn--secondary" id="whatsBtn" type="button" disabled>Enviar por WhatsApp</button>
+                </div>
+              </div>
+
+              <div class="alert" id="alert" role="status" aria-live="polite"></div>
+
+              <div class="miniLinks">
+                <a
+                  class="miniLink"
+                  href="https://booksy.com/es-es/90583_el-coliseum_barberia_59555_plasencia"
+                  target="_blank"
+                  rel="noreferrer"
+                >¿Prefieres Booksy?</a>
+                <span class="muted">•</span>
+                <button class="miniLink" id="downloadIcsBtn" type="button" disabled>Descargar recordatorio (.ics)</button>
+              </div>
+
+              <!-- hidden real date value -->
+              <input id="dateValue" type="hidden" />
+            </form>
+          </div>
+
+          <!-- LISTA DE CITAS -->
+          <section class="section section--tight">
+            <div class="container">
+              <div class="section__head reveal">
+                <h3>Mis próximas citas (en este dispositivo)</h3>
+                <p class="muted">Esto se guarda en tu navegador. Si quieres un sistema “real” con base de datos, lo conectamos a un servicio externo.</p>
+              </div>
+
+              <ul class="apptList reveal" id="apptList"></ul>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <!-- SORPRESA -->
+      <section class="section" id="sorpresa">
+        <div class="container">
+          <div class="section__head reveal">
+            <h2>Una sorpresa</h2>
+            <p class="muted">Pequeño detalle con movimiento 😄</p>
+          </div>
+
+          <div class="surprise reveal">
+            <button id="btn" class="btn btn--ghost">Haz clic si no te lo quieres perder</button>
+            <p id="msg" class="muted"></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- CONTACTO -->
+      <section class="section" id="contacto">
+        <div class="container">
+          <div class="section__head reveal">
+            <h2>Contacto</h2>
+            <p class="muted">Edita estos datos con los reales.</p>
+          </div>
+
+          <div class="contactGrid">
+            <div class="card reveal">
+              <h3>Ubicación</h3>
+              <p class="muted">Plasencia (Cáceres)</p>
+              <p class="muted">Calle …, Nº …</p>
+            </div>
+
+            <div class="card reveal">
+              <h3>Horario</h3>
+              <p class="muted">L–V: 10:00–14:00 / 16:00–20:00</p>
+              <p class="muted">S: 10:00–14:00</p>
+              <p class="muted">D: cerrado</p>
+            </div>
+
+            <div class="card reveal">
+              <h3>Reserva rápida</h3>
+              <p class="muted">Puedes enviar tu cita por WhatsApp o usar Booksy.</p>
+              <a class="btn btn--primary" href="#reservar">Agendar ahora</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <a class="floatCta" href="#reservar" aria-label="Reservar cita">Reservar</a>
+    </main>
+
+    <footer class="footer">
+      <div class="container footer__inner">
+        <small>© 2026 — EL COLISEUM BARBERSHOP</small>
+        <small class="muted">Hecho con ❤️ en HTML/CSS/JS</small>
+      </div>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>

@@ -125,7 +125,7 @@ const btn = document.getElementById("btn");
 const msg = document.getElementById("msg");
 btn?.addEventListener("click", () => {
   msg.textContent =
-    "🔥 Dale a “Agendar cita” y reserva en 20 segundos. ¡Nos vemos en EL COLISEUM! ⚔️";
+    "🔥🔥 ¡AGENDA tu cita rápidamente! 🔥🔥 ¡Y por ser tu primera vez consigue un 10% de DESCUENTO en tu primer corte! 💥✂️🔥. ¡Nos vemos en EL COLISEUM! ⚔️";
 });
 
 // =====================

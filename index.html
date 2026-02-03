@@ -6,7 +6,7 @@
     <title>EL COLISEUM BARBERSHOP</title>
 
     <!-- cache-busting: sube el número si no se actualiza -->
-    <link rel="stylesheet" href="style.css?v=5" />
+    <link rel="stylesheet" href="style.css?v=8" />
   </head>
 
   <body>
@@ -66,7 +66,7 @@
       </section>
 
       <!-- SERVICIOS -->
-      <section class="section" id="servicios">
+      <section class="section section--alt" id="servicios">
         <div class="container">
           <div class="section__head reveal">
             <h2>Servicios</h2>
@@ -302,6 +302,18 @@
             </form>
           </div>
 
+          <!-- NUEVO: HUECOS LIBRES -->
+          <div class="panel panel--lift" id="huecos">
+            <div class="section__head reveal">
+              <h3>Huecos libres (próximos días)</h3>
+              <p class="muted">
+                Te mostramos los días con pocas citas guardadas y sus rangos disponibles.
+              </p>
+            </div>
+
+            <div class="freeSlotsGrid" id="freeSlotsGrid"></div>
+          </div>
+
           <!-- LISTA DE CITAS -->
           <section class="section section--tight">
             <div class="container">
@@ -319,7 +331,7 @@
       </section>
 
       <!-- SORPRESA -->
-      <section class="section" id="sorpresa">
+      <section class="section section--alt" id="sorpresa">
         <div class="container">
           <div class="section__head reveal">
             <h2>Una sorpresa</h2>
@@ -375,6 +387,6 @@
     </footer>
 
     <!-- cache-busting: sube el número si no se actualiza -->
-    <script src="app.js?v=5"></script>
+    <script src="app.js?v=8"></script>
   </body>
 </html>

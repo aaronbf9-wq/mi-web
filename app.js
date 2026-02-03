@@ -8,7 +8,7 @@ const WHATSAPP_NUMBER = "34617494566"; // <-- rellena esto
 // Huecos libres (ajusta a tu gusto)
 const FREE_DAYS_AHEAD = 10;      // próximos X días
 const LOW_APPT_THRESHOLD = 2;    // “pocas citas” = 0..2 (cámbialo)
-const SHOW_FREE_AS_RANGES = true; // true: rangos 10:00–12:00 / false: horas sueltas
+const SHOW_FREE_AS_RANGES = false; // true: rangos 10:00–12:00 / false: horas sueltas
 
 // Horarios
 const HOURS = {

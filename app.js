@@ -2,6 +2,12 @@
 // CONFIG (edita esto)
 // =====================
 
+//Conectar la web con la base de datos
+const SUPABASE_URL = "https://nhoaoyfbibykonelewkr.supabase.co"; // <- lo copias de Data API (Project URL)
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ob2FveWZiaWJ5a29uZWxld2tyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxMzI0NzksImV4cCI6MjA4NTcwODQ3OX0.mBGWd7vJmO-9l32_lqP676fyU0rYQB3ce8D433mxfQM"; // <- la anon public key que has visto (la larga)
+
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 // ✅ Pon aquí TU número con prefijo. Ejemplo España: "346XXXXXXXX"
 const WHATSAPP_NUMBER = ""; // <-- rellena esto
 

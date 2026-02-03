@@ -8,6 +8,16 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// ✅ PRUEBA
+(async () => {
+  const { data, error } = await db.rpc("get_busy_slots", {
+    date_from: "2026-02-01",
+    date_to: "2026-02-10",
+  });
+  console.log("busy slots:", data, error);
+})();
+
+
 // ✅ Pon aquí TU número con prefijo. Ejemplo España: "346XXXXXXXX"
 const WHATSAPP_NUMBER = "34617494566"; // <-- rellena esto
 

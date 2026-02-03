@@ -3,12 +3,18 @@
 // =====================
 
 // ✅ Pon aquí TU número con prefijo. Ejemplo España: "346XXXXXXXX"
-const WHATSAPP_NUMBER = "34617494566"; // <-- rellena esto
+const WHATSAPP_NUMBER = ""; // <-- rellena esto
 
-// Huecos libres (ajusta a tu gusto)
-const FREE_DAYS_AHEAD = 10;      // próximos X días
-const LOW_APPT_THRESHOLD = 2;    // “pocas citas” = 0..2 (cámbialo)
-const SHOW_FREE_AS_RANGES = false; // true: rangos 10:00–12:00 / false: horas sueltas
+// =====================
+// Disponibilidad rápida (AJUSTA)
+// =====================
+// “Huecos” se calculan como slots disponibles de AVAILABILITY_SLOT_MIN
+const FREE_DAYS_AHEAD = 10;          // próximos X días a revisar
+const AVAILABILITY_SLOT_MIN = 30;    // “un hueco” = 30 min (pon 15 si quieres más fino)
+const SCARCITY_CRITICAL = 5;         // 🔥 cuando queden 5 o menos -> “poca disponibilidad”
+const SCARCITY_WARNING  = 10;        // ⚠️ cuando queden 10 o menos -> “se está llenando”
+const SHOW_SCARCITY_ONLY = true;     // true = solo muestra días con poca disponibilidad
+const SHOW_FREE_AS_RANGES = true;    // true: rangos (10:00–12:00) / false: horas sueltas
 
 // Horarios
 const HOURS = {
@@ -111,6 +117,26 @@ function generateSlotsForDate(date, durationMin) {
   return slots;
 }
 
+// Calcula slots de inicio DISPONIBLES para una duración dada (para contar “quedan X huecos”)
+function getAvailableStartTimesForDay(date, durationMin) {
+  const iso = toISODate(date);
+  const existing = loadAppointments().filter(a => a.date === iso);
+
+  let slots = generateSlotsForDate(date, durationMin);
+
+  slots = slots.filter((time) => {
+    const start = parseTimeToMinutes(time);
+    const end = start + durationMin;
+
+    return !existing.some((a) => {
+      const o = apptToInterval(a);
+      return start < o.end && end > o.start;
+    });
+  });
+
+  return slots;
+}
+
 // =====================
 // Reveal animations
 // =====================
@@ -153,13 +179,12 @@ const alertBox = document.getElementById("alert");
 const whatsBtn = document.getElementById("whatsBtn");
 const downloadIcsBtn = document.getElementById("downloadIcsBtn");
 const apptList = document.getElementById("apptList");
+const freeSlotsGrid = document.getElementById("freeSlotsGrid");
 
 const nameInput = document.getElementById("name");
 const phoneInput = document.getElementById("phone");
 const serviceSelect = document.getElementById("service");
 const notesInput = document.getElementById("notes");
-
-const freeSlotsGrid = document.getElementById("freeSlotsGrid");
 
 let view = new Date();
 view.setDate(1);
@@ -271,7 +296,7 @@ function renderCalendar() {
 }
 
 // =====================
-// Times
+// Times (según servicio + citas guardadas)
 // =====================
 function populateTimes() {
   timeSelect.innerHTML = "";
@@ -294,13 +319,12 @@ function populateTimes() {
   const existing = loadAppointments().filter((a) => a.date === dateISO);
 
   slots = slots.filter((time) => {
-    const probe = { date: dateISO, time, service, duration: durationMin };
-    if (!service) return true;
+    const start = parseTimeToMinutes(time);
+    const end = start + durationMin;
 
     return !existing.some((a) => {
-      const n = apptToInterval(probe);
       const o = apptToInterval(a);
-      return n.start < o.end && n.end > o.start;
+      return start < o.end && end > o.start;
     });
   });
 
@@ -395,7 +419,7 @@ function renderAppointments() {
       const next = loadAppointments().filter((x) => x.id !== a.id);
       saveAppointments(next);
       renderAppointments();
-      renderFreeSlots();   // ✅ refresca huecos
+      renderFreeSlots();  // refresca disponibilidad
       setAlert("Cita eliminada.", "ok");
       populateTimes();
     });
@@ -427,7 +451,6 @@ function toICSDateTime(dateISO, timeHHMM) {
 
 function downloadICS(appt) {
   const dtStart = toICSDateTime(appt.date, appt.time);
-
   const durationMin = appt.duration ?? getServiceDuration(appt.service);
 
   const [y, mo, d] = appt.date.split("-").map(Number);
@@ -509,7 +532,7 @@ function enablePostCreateActions(appt) {
 }
 
 // =====================
-// NUEVO: Huecos libres (visual)
+// Disponibilidad: rangos libres (visual)
 // =====================
 function mergeIntervals(intervals){
   if (!intervals.length) return [];
@@ -561,37 +584,55 @@ function getFreeRangesForDay(date){
   return freeRanges;
 }
 
-function renderFreeSlots(){
+function renderFreeSlots() {
   if (!freeSlotsGrid) return;
 
   freeSlotsGrid.innerHTML = "";
 
   const today = new Date();
-  today.setHours(0,0,0,0);
+  today.setHours(0, 0, 0, 0);
 
-  for (let i=0; i<FREE_DAYS_AHEAD; i++){
+  for (let i = 0; i < FREE_DAYS_AHEAD; i++) {
     const d = new Date(today);
     d.setDate(today.getDate() + i);
 
     if (isClosed(d)) continue;
-
     const iso = toISODate(d);
-    const appts = getAppointmentsForISO(iso);
 
-    // solo días con “pocas citas guardadas”
-    if (appts.length > LOW_APPT_THRESHOLD) continue;
+    // capacidad teórica medida en “slots” de AVAILABILITY_SLOT_MIN
+    const totalSlots = generateSlotsForDate(d, AVAILABILITY_SLOT_MIN).length;
+
+    // slots disponibles reales (restando citas guardadas)
+    const availableSlots = getAvailableStartTimesForDay(d, AVAILABILITY_SLOT_MIN);
+    const remaining = availableSlots.length;
+
+    // si solo quieres ver días “justos”
+    if (SHOW_SCARCITY_ONLY && remaining > SCARCITY_WARNING) continue;
+
+    const severity =
+      remaining <= SCARCITY_CRITICAL ? "critical" :
+      remaining <= SCARCITY_WARNING  ? "warning"  :
+      "ok";
 
     const freeRanges = getFreeRangesForDay(d);
+    const pct = totalSlots > 0 ? Math.round((remaining / totalSlots) * 100) : 0;
 
     const card = document.createElement("div");
-    card.className = "dayCard";
+    card.className = `dayCard dayCard--${severity}`;
 
     const top = document.createElement("div");
     top.className = "dayCard__top";
     top.innerHTML = `
       <div>
         <div class="dayTitle">${niceSpanishDate(iso)}</div>
-        <div class="daySub">${appts.length} cita(s) guardada(s)</div>
+        <div class="daySub">Quedan <strong>${remaining}</strong> huecos (${pct}%)</div>
+        <div class="statusBadge statusBadge--${severity}">
+          ${
+            severity === "critical" ? "🔥 Poca disponibilidad" :
+            severity === "warning"  ? "⚠️ Se está llenando" :
+            "✅ Bastante disponible"
+          }
+        </div>
       </div>
       <button class="smallBtn" type="button">Elegir</button>
     `;
@@ -602,41 +643,45 @@ function renderFreeSlots(){
       selectedDateText.textContent = niceSpanishDate(iso);
       populateTimes();
       renderCalendar();
-      document.getElementById("reservar")?.scrollIntoView({behavior:"smooth"});
+      document.getElementById("reservar")?.scrollIntoView({ behavior: "smooth" });
     });
+
+    const bar = document.createElement("div");
+    bar.className = "progress";
+    bar.innerHTML = `<span style="width:${Math.min(100, pct)}%"></span>`;
 
     const chips = document.createElement("div");
     chips.className = "chips";
 
-    if (!freeRanges.length) {
-      chips.innerHTML = `<span class="chip">Sin huecos</span>`;
-    } else {
-      if (SHOW_FREE_AS_RANGES){
-        freeRanges.forEach(r => {
+    if (SHOW_FREE_AS_RANGES) {
+      if (!freeRanges.length) {
+        chips.innerHTML = `<span class="chip">Sin huecos</span>`;
+      } else {
+        freeRanges.forEach((r) => {
           const span = document.createElement("span");
           span.className = "chip";
           span.textContent = `${minutesToTime(r.start)}–${minutesToTime(r.end)}`;
           chips.appendChild(span);
         });
-      } else {
-        const slots = generateSlotsForDate(d, 30);
-        slots.slice(0, 18).forEach(s => {
-          const span = document.createElement("span");
-          span.className = "chip";
-          span.textContent = s;
-          chips.appendChild(span);
-        });
       }
+    } else {
+      availableSlots.slice(0, 12).forEach((t) => {
+        const span = document.createElement("span");
+        span.className = "chip";
+        span.textContent = t;
+        chips.appendChild(span);
+      });
     }
 
     card.appendChild(top);
+    card.appendChild(bar);
     card.appendChild(chips);
     freeSlotsGrid.appendChild(card);
   }
 
-  if (!freeSlotsGrid.children.length){
+  if (!freeSlotsGrid.children.length) {
     freeSlotsGrid.innerHTML =
-      `<div class="dayCard"><div class="dayTitle">No hay días con pocas citas</div><div class="daySub">Prueba a subir FREE_DAYS_AHEAD o subir LOW_APPT_THRESHOLD.</div></div>`;
+      `<div class="dayCard"><div class="dayTitle">Sin alertas de disponibilidad</div><div class="daySub">No hay días “justos” en los próximos ${FREE_DAYS_AHEAD} días.</div></div>`;
   }
 }
 
@@ -709,11 +754,10 @@ form.addEventListener("submit", (e) => {
   saveAppointments(list);
 
   renderAppointments();
-  renderFreeSlots(); // ✅ refresca huecos
+  renderFreeSlots(); // refresca disponibilidad
   enablePostCreateActions(appt);
 
   setAlert("Cita guardada ✅ Ahora puedes enviarla por WhatsApp o descargar el recordatorio (.ics).", "ok");
-
   populateTimes();
 });
 
@@ -735,7 +779,7 @@ document.querySelectorAll(".serviceBtn").forEach((b) => {
 // =====================
 renderCalendar();
 renderAppointments();
-renderFreeSlots(); // ✅ init huecos
+renderFreeSlots();
 populateTimes();
 
 (function autoSelectToday() {

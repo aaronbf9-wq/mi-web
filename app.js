@@ -1,11 +1,9 @@
 // =====================
 // CONFIG (edita esto)
 // =====================
-const BOOKSY_URL =
-  "https://booksy.com/es-es/90583_el-coliseum_barberia_59555_plasencia";
 
-// ⚠️ Pon aquí TU número (con prefijo). Ejemplo España: "346XXXXXXX"
-const WHATSAPP_NUMBER = "34617494566"; // <-- rellena esto
+// ⚠️ Pon aquí TU número (con prefijo). Ejemplo España: "346XXXXXXXX"
+const WHATSAPP_NUMBER = ""; // <-- rellena esto
 
 // Horarios
 const HOURS = {
@@ -21,7 +19,7 @@ const HOURS = {
 // Paso entre horas mostradas (15 min porque tienes servicios de 15/20/45)
 const SLOT_STEP_MIN = 15;
 
-// Servicios “como Booksy”
+// Servicios (precio + duración)
 const SERVICE_META = {
   "Corte degradado": { duration: 30, price: 12.5 },
   "Recorte de la barba": { duration: 15, price: 6.0 },
@@ -42,7 +40,12 @@ function getServicePrice(serviceName) {
 }
 function formatEuro(value) {
   if (value === null || value === undefined) return "";
-  return value.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "€";
+  return (
+    value.toLocaleString("es-ES", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }) + "€"
+  );
 }
 
 // =====================
@@ -123,9 +126,10 @@ revealEls.forEach((el) => io.observe(el));
 // =====================
 const btn = document.getElementById("btn");
 const msg = document.getElementById("msg");
+
 btn?.addEventListener("click", () => {
   msg.textContent =
-    "🔥🔥 ¡AGENDA tu cita rápidamente! 🔥🔥 ¡Y por ser tu primera vez consigue un 10% de DESCUENTO en tu primer corte! 💥✂️🔥. " + "\n" + " ¡Nos vemos en EL COLISEUM! ⚔️";
+    "🔥🔥 ¡AGENDA tu cita rápidamente! 🔥🔥 ¡Y por ser tu primera vez consigue un 10% de DESCUENTO en tu primer corte! 💥✂️🔥\n\n¡Nos vemos en EL COLISEUM! ⚔️";
 });
 
 // =====================
@@ -200,7 +204,7 @@ function hasOverlap(newAppt) {
   return list.some((a) => {
     if (a.date !== newAppt.date) return false;
     const o = apptToInterval(a);
-    return n.start < o.end && n.end > o.start; // solape
+    return n.start < o.end && n.end > o.start;
   });
 }
 
@@ -294,7 +298,6 @@ function populateTimes() {
       service,
       duration: durationMin,
     };
-    // si aún no hay servicio elegido, no filtramos fuerte
     if (!service) return true;
     return !existing.some((a) => {
       const n = apptToInterval(probe);
@@ -447,8 +450,7 @@ function downloadICS(appt) {
     `Teléfono: ${appt.phone}\\n` +
     `Servicio: ${appt.service}${priceTxt}\\n` +
     `Duración: ${durationMin} min\\n` +
-    (appt.notes ? `Nota: ${appt.notes}\\n` : "") +
-    `Booksy: ${BOOKSY_URL}`;
+    (appt.notes ? `Nota: ${appt.notes}\\n` : "");
 
   const ics =
 `BEGIN:VCALENDAR
@@ -579,7 +581,6 @@ form.addEventListener("submit", (e) => {
 
   setAlert("Cita guardada ✅ Ahora puedes enviarla por WhatsApp o descargar el recordatorio (.ics).", "ok");
 
-  // refrescar horas para marcar ocupadas
   populateTimes();
 });
 
@@ -592,7 +593,6 @@ document.querySelectorAll(".serviceBtn").forEach((b) => {
     serviceSelect.value = service;
     if (selectedDate) populateTimes();
 
-    // scroll al bloque de reservas
     document.getElementById("reservar")?.scrollIntoView({ behavior: "smooth" });
     setAlert(`Servicio seleccionado: ${service}. Ahora elige día y hora.`, "ok");
   });

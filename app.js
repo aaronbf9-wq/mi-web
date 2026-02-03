@@ -173,7 +173,7 @@ function isPast(date) {
 }
 function isClosed(date) {
   const day = date.getDay();
-  return day === 0; // domingo cerrado
+  return day === 0;
 }
 
 // =====================
@@ -190,7 +190,6 @@ function saveAppointments(list) {
   localStorage.setItem("coliseumAppointments", JSON.stringify(list));
 }
 
-// Overlap real (según duración)
 function apptToInterval(appt) {
   const start = parseTimeToMinutes(appt.time);
   const dur = appt.duration ?? getServiceDuration(appt.service);
@@ -223,7 +222,6 @@ function renderCalendar() {
   const firstDayOfMonth = new Date(view.getFullYear(), view.getMonth(), 1);
   const lastDayOfMonth = new Date(view.getFullYear(), view.getMonth() + 1, 0);
 
-  // semana empieza lunes
   const jsDay = firstDayOfMonth.getDay();
   const mondayIndex = (jsDay + 6) % 7;
   const blanks = mondayIndex;
@@ -248,8 +246,7 @@ function renderCalendar() {
     if (off) cell.classList.add("day--off");
 
     if (sameDay(date, today)) cell.classList.add("day--today");
-    if (selectedDate && sameDay(date, selectedDate))
-      cell.classList.add("day--selected");
+    if (selectedDate && sameDay(date, selectedDate)) cell.classList.add("day--selected");
 
     cell.addEventListener("click", () => {
       if (off) return;
@@ -287,18 +284,13 @@ function populateTimes() {
 
   let slots = generateSlotsForDate(selectedDate, durationMin);
 
-  // filtrar slots ocupados por solape
   const dateISO = toISODate(selectedDate);
   const existing = loadAppointments().filter((a) => a.date === dateISO);
 
   slots = slots.filter((time) => {
-    const probe = {
-      date: dateISO,
-      time,
-      service,
-      duration: durationMin,
-    };
+    const probe = { date: dateISO, time, service, duration: durationMin };
     if (!service) return true;
+
     return !existing.some((a) => {
       const n = apptToInterval(probe);
       const o = apptToInterval(a);
@@ -584,7 +576,6 @@ form.addEventListener("submit", (e) => {
   populateTimes();
 });
 
-// Botones "Reservar" desde tarjetas de servicio
 document.querySelectorAll(".serviceBtn").forEach((b) => {
   b.addEventListener("click", () => {
     const service = b.getAttribute("data-service");
@@ -605,7 +596,6 @@ renderCalendar();
 renderAppointments();
 populateTimes();
 
-// Auto-select hoy si está abierto
 (function autoSelectToday() {
   const t = new Date();
   if (!isPast(t) && !isClosed(t)) {

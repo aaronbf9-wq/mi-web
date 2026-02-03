@@ -6,7 +6,7 @@
     <title>EL COLISEUM BARBERSHOP</title>
 
     <!-- cache-busting: sube el número si no se actualiza -->
-    <link rel="stylesheet" href="style.css?v=3" />
+    <link rel="stylesheet" href="style.css?v=4" />
   </head>
 
   <body>
@@ -44,14 +44,7 @@
 
             <div class="hero__cta">
               <a class="btn btn--primary" href="#reservar">Agendar cita</a>
-              <a
-                class="btn btn--ghost"
-                href="https://booksy.com/es-es/90583_el-coliseum_barberia_59555_plasencia"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Reservar en Booksy
-              </a>
+              <a class="btn btn--ghost" href="#servicios">Ver servicios</a>
             </div>
 
             <div class="hero__note">
@@ -77,10 +70,9 @@
         <div class="container">
           <div class="section__head reveal">
             <h2>Servicios</h2>
-            <p class="muted">Elige tu servicio (según Booksy). Puedes pulsar “Reservar” para seleccionar y bajar al calendario.</p>
+            <p class="muted">Elige tu servicio. Pulsa “Reservar” para seleccionarlo y bajar al calendario.</p>
           </div>
 
-          <!-- GRID SERVICIOS (Booksy) -->
           <div class="cards">
             <article class="card reveal">
               <h3>Corte degradado</h3>
@@ -216,7 +208,7 @@
         <div class="container">
           <div class="section__head reveal">
             <h2>Agenda tu cita</h2>
-            <p class="muted">Selecciona día y hora. Se guardará en este dispositivo y puedes enviarla por WhatsApp.</p>
+            <p class="muted">Selecciona día y hora. Se guardará en este dispositivo y podrás enviarla por WhatsApp.</p>
           </div>
 
           <div class="booking">
@@ -301,14 +293,9 @@
               <div class="alert" id="alert" role="status" aria-live="polite"></div>
 
               <div class="miniLinks">
-                <a
-                  class="miniLink"
-                  href="https://booksy.com/es-es/90583_el-coliseum_barberia_59555_plasencia"
-                  target="_blank"
-                  rel="noreferrer"
-                >¿Prefieres Booksy?</a>
-                <span class="muted">•</span>
-                <button class="miniLink" id="downloadIcsBtn" type="button" disabled>Descargar recordatorio (.ics)</button>
+                <button class="miniLink" id="downloadIcsBtn" type="button" disabled>
+                  Descargar recordatorio (.ics)
+                </button>
               </div>
 
               <input id="dateValue" type="hidden" />
@@ -321,7 +308,7 @@
               <div class="section__head reveal">
                 <h3>Mis próximas citas (en este dispositivo)</h3>
                 <p class="muted">
-                  Esto se guarda en tu navegador. Si quieres un sistema “real” con base de datos, lo conectamos a un servicio externo.
+                  Esto se guarda en tu navegador. Si quieres un sistema “real” con base de datos, se puede conectar a un servicio externo.
                 </p>
               </div>
 
@@ -370,7 +357,7 @@
 
             <div class="card reveal">
               <h3>Reserva rápida</h3>
-              <p class="muted">Puedes enviar tu cita por WhatsApp o usar Booksy.</p>
+              <p class="muted">Reserva aquí y confirma por WhatsApp en un clic.</p>
               <a class="btn btn--primary" href="#reservar">Agendar ahora</a>
             </div>
           </div>
@@ -388,6 +375,6 @@
     </footer>
 
     <!-- cache-busting: sube el número si no se actualiza -->
-    <script src="app.js?v=3"></script>
+    <script src="app.js?v=4"></script>
   </body>
 </html>

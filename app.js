@@ -2,8 +2,13 @@
 // CONFIG (edita esto)
 // =====================
 
-// ⚠️ Pon aquí TU número (con prefijo). Ejemplo España: "346XXXXXXXX"
+// ✅ Pon aquí TU número con prefijo. Ejemplo España: "346XXXXXXXX"
 const WHATSAPP_NUMBER = "34617494566"; // <-- rellena esto
+
+// Huecos libres (ajusta a tu gusto)
+const FREE_DAYS_AHEAD = 10;      // próximos X días
+const LOW_APPT_THRESHOLD = 2;    // “pocas citas” = 0..2 (cámbialo)
+const SHOW_FREE_AS_RANGES = true; // true: rangos 10:00–12:00 / false: horas sueltas
 
 // Horarios
 const HOURS = {
@@ -16,7 +21,7 @@ const HOURS = {
   sunday: [], // cerrado
 };
 
-// Paso entre horas mostradas (15 min porque tienes servicios de 15/20/45)
+// Paso entre horas mostradas
 const SLOT_STEP_MIN = 15;
 
 // Servicios (precio + duración)
@@ -90,7 +95,6 @@ function getRangesForDate(date) {
   return HOURS.default;
 }
 
-// Genera slots teniendo en cuenta duración del servicio
 function generateSlotsForDate(date, durationMin) {
   const ranges = getRangesForDate(date);
   const slots = [];
@@ -154,6 +158,8 @@ const nameInput = document.getElementById("name");
 const phoneInput = document.getElementById("phone");
 const serviceSelect = document.getElementById("service");
 const notesInput = document.getElementById("notes");
+
+const freeSlotsGrid = document.getElementById("freeSlotsGrid");
 
 let view = new Date();
 view.setDate(1);
@@ -389,6 +395,7 @@ function renderAppointments() {
       const next = loadAppointments().filter((x) => x.id !== a.id);
       saveAppointments(next);
       renderAppointments();
+      renderFreeSlots();   // ✅ refresca huecos
       setAlert("Cita eliminada.", "ok");
       populateTimes();
     });
@@ -502,6 +509,138 @@ function enablePostCreateActions(appt) {
 }
 
 // =====================
+// NUEVO: Huecos libres (visual)
+// =====================
+function mergeIntervals(intervals){
+  if (!intervals.length) return [];
+  intervals.sort((a,b)=>a.start-b.start);
+  const out = [intervals[0]];
+  for (let i=1;i<intervals.length;i++){
+    const prev = out[out.length-1];
+    const cur = intervals[i];
+    if (cur.start <= prev.end) prev.end = Math.max(prev.end, cur.end);
+    else out.push(cur);
+  }
+  return out;
+}
+
+function subtractIntervals(openRange, busyIntervals){
+  const res = [];
+  let cursor = openRange.start;
+
+  for (const b of busyIntervals){
+    if (b.end <= cursor) continue;
+    if (b.start >= openRange.end) break;
+
+    const s = Math.max(cursor, openRange.start);
+    const e = Math.min(b.start, openRange.end);
+    if (e > s) res.push({start:s, end:e});
+
+    cursor = Math.max(cursor, b.end);
+    if (cursor >= openRange.end) break;
+  }
+
+  if (cursor < openRange.end) res.push({start: cursor, end: openRange.end});
+  return res;
+}
+
+function getAppointmentsForISO(iso){
+  return loadAppointments().filter(a => a.date === iso);
+}
+
+function getFreeRangesForDay(date){
+  const iso = toISODate(date);
+  const busy = mergeIntervals(getAppointmentsForISO(iso).map(apptToInterval));
+  const ranges = getRangesForDate(date);
+
+  let freeRanges = [];
+  for (const r of ranges){
+    const openRange = { start: parseTimeToMinutes(r.start), end: parseTimeToMinutes(r.end) };
+    freeRanges = freeRanges.concat(subtractIntervals(openRange, busy));
+  }
+  return freeRanges;
+}
+
+function renderFreeSlots(){
+  if (!freeSlotsGrid) return;
+
+  freeSlotsGrid.innerHTML = "";
+
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  for (let i=0; i<FREE_DAYS_AHEAD; i++){
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+
+    if (isClosed(d)) continue;
+
+    const iso = toISODate(d);
+    const appts = getAppointmentsForISO(iso);
+
+    // solo días con “pocas citas guardadas”
+    if (appts.length > LOW_APPT_THRESHOLD) continue;
+
+    const freeRanges = getFreeRangesForDay(d);
+
+    const card = document.createElement("div");
+    card.className = "dayCard";
+
+    const top = document.createElement("div");
+    top.className = "dayCard__top";
+    top.innerHTML = `
+      <div>
+        <div class="dayTitle">${niceSpanishDate(iso)}</div>
+        <div class="daySub">${appts.length} cita(s) guardada(s)</div>
+      </div>
+      <button class="smallBtn" type="button">Elegir</button>
+    `;
+
+    top.querySelector("button").addEventListener("click", () => {
+      selectedDate = d;
+      dateValue.value = iso;
+      selectedDateText.textContent = niceSpanishDate(iso);
+      populateTimes();
+      renderCalendar();
+      document.getElementById("reservar")?.scrollIntoView({behavior:"smooth"});
+    });
+
+    const chips = document.createElement("div");
+    chips.className = "chips";
+
+    if (!freeRanges.length) {
+      chips.innerHTML = `<span class="chip">Sin huecos</span>`;
+    } else {
+      if (SHOW_FREE_AS_RANGES){
+        freeRanges.forEach(r => {
+          const span = document.createElement("span");
+          span.className = "chip";
+          span.textContent = `${minutesToTime(r.start)}–${minutesToTime(r.end)}`;
+          chips.appendChild(span);
+        });
+      } else {
+        const slots = generateSlotsForDate(d, 30);
+        slots.slice(0, 18).forEach(s => {
+          const span = document.createElement("span");
+          span.className = "chip";
+          span.textContent = s;
+          chips.appendChild(span);
+        });
+      }
+    }
+
+    card.appendChild(top);
+    card.appendChild(chips);
+    freeSlotsGrid.appendChild(card);
+  }
+
+  if (!freeSlotsGrid.children.length){
+    freeSlotsGrid.innerHTML =
+      `<div class="dayCard"><div class="dayTitle">No hay días con pocas citas</div><div class="daySub">Prueba a subir FREE_DAYS_AHEAD o subir LOW_APPT_THRESHOLD.</div></div>`;
+  }
+}
+
+// =====================
 // Events
 // =====================
 prevMonthBtn.addEventListener("click", () => {
@@ -520,7 +659,8 @@ whatsBtn.addEventListener("click", () => {
     setAlert("Falta configurar WHATSAPP_NUMBER en app.js.", "bad");
     return;
   }
-  window.open(wa, "_blank", "noopener,noreferrer");
+  // ✅ más fiable que window.open (evita bloqueos)
+  window.location.href = wa;
 });
 
 downloadIcsBtn.addEventListener("click", () => {
@@ -569,6 +709,7 @@ form.addEventListener("submit", (e) => {
   saveAppointments(list);
 
   renderAppointments();
+  renderFreeSlots(); // ✅ refresca huecos
   enablePostCreateActions(appt);
 
   setAlert("Cita guardada ✅ Ahora puedes enviarla por WhatsApp o descargar el recordatorio (.ics).", "ok");
@@ -594,6 +735,7 @@ document.querySelectorAll(".serviceBtn").forEach((b) => {
 // =====================
 renderCalendar();
 renderAppointments();
+renderFreeSlots(); // ✅ init huecos
 populateTimes();
 
 (function autoSelectToday() {

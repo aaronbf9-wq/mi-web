@@ -3,7 +3,7 @@
 // =====================
 
 // ⚠️ Pon aquí TU número (con prefijo). Ejemplo España: "346XXXXXXXX"
-const WHATSAPP_NUMBER = ""; // <-- rellena esto
+const WHATSAPP_NUMBER = "34617494566"; // <-- rellena esto
 
 // Horarios
 const HOURS = {

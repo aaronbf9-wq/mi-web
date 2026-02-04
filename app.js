@@ -2,7 +2,7 @@
 // CONFIG (edita esto)
 // =====================
 const SUPABASE_URL = "https://nhoaoyfbibykonelewkr.supabase.co";
-const SUPABASE_ANON_KEY = "PEGA_AQUI_TU_ANON_KEY_LARGA";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ob2FveWZiaWJ5a29uZWxld2tyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxMzI0NzksImV4cCI6MjA4NTcwODQ3OX0.mBGWd7vJmO-9l32_lqP676fyU0rYQB3ce8D433mxfQM";
 const WHATSAPP_NUMBER = "34617494566"; // con prefijo país
 const DEBUG = true;
 

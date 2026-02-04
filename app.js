@@ -67,9 +67,10 @@ function niceSpanishDate(iso) {
   return date.toLocaleDateString("es-ES", { weekday:"long", day:"2-digit", month:"long" });
 }
 function getRangesForDate(date) {
-  const day = date.getDay();
+  const day = date.getDay(); // 0=Dom, 1=Lun, 2=Mar, ... 6=Sab
   if (day === 0) return HOURS.sunday;
   if (day === 6) return HOURS.saturday;
+  if (day === 2) return HOURS.tuesday; // martes
   return HOURS.default;
 }
 function generateSlotsForDate(date, durationMin) {

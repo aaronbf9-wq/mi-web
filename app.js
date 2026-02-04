@@ -19,6 +19,9 @@ const SHOW_FREE_AS_RANGES = true;
 const HOURS = {
   default: [
     { start: "10:00", end: "14:00" },
+    { start: "16:00", end: "21:00" },
+  ],
+  tuesday: [
     { start: "16:00", end: "20:00" },
   ],
   saturday: [{ start: "10:00", end: "14:00" }],

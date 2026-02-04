@@ -153,7 +153,7 @@ document.addEventListener("DOMContentLoaded", () => {
     remoteBusyByDate.clear();
     (data || []).forEach(row => {
       const iso = row.date;
-      const start = parseTimeToMinutes(row.time);
+      const start = parseTimeToMinutes(row.slot_time);
       const end = start + Number(row.duration || 0);
       if (!remoteBusyByDate.has(iso)) remoteBusyByDate.set(iso, []);
       remoteBusyByDate.get(iso).push({ start, end });

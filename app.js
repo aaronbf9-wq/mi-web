@@ -829,6 +829,36 @@ END:VCALENDAR`;
           </div>
     </div>
 `;
+      div.querySelector('[data-action="deleteReview"]').addEventListener("click", async () => {
+  const reviewId = div.querySelector('[data-action="deleteReview"]').dataset.id;
+
+  const em = (reviewEmail?.value || "").trim();
+  const ph = (reviewPhone?.value || "").trim();
+
+  if (!em || !ph) {
+    setReviewAlert("Para borrar una reseña, escribe tu email y teléfono en el formulario.", "bad");
+    return;
+  }
+
+  const { data, error } = await db.rpc("delete_review", {
+    p_review_id: reviewId,
+    p_email: em,
+    p_phone: ph,
+  });
+
+  if (error) {
+    setReviewAlert("Error al borrar: " + error.message, "bad");
+    return;
+  }
+  if (!data?.[0]?.ok) {
+    setReviewAlert(data?.[0]?.message || "No se pudo borrar.", "bad");
+    return;
+  }
+
+  setReviewAlert("Reseña borrada ✅", "ok");
+  await loadPublicReviews();
+});
+
 
       reviewsList.appendChild(div);
     });

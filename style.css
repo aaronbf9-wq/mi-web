@@ -603,6 +603,11 @@ section[id]{ scroll-margin-top: 92px; }
   outline: none;
 }
 .reviewForm textarea{ resize: vertical; }
+.reviewActions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 
 /* Estrellas */
 .starRating{

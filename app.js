@@ -813,13 +813,23 @@ END:VCALENDAR`;
       div.className = "reviewItem";
       const dt = new Date(r.created_at);
       div.innerHTML = `
-        <div class="reviewTop">
+      <div class="reviewTop">
           <div class="reviewName">${r.name}</div>
           <div class="reviewDate">${dt.toLocaleDateString("es-ES")}</div>
         </div>
         <div class="reviewStars">${starsText(r.rating)}</div>
         <div class="reviewText">${r.comment}</div>
-      `;
+
+        <div class="reviewActions" style="margin-top:10px;">
+          <button class="smallBtn" data-action="deleteReview" data-id="${r.id}">
+            Borrar
+          </button>
+        <div class="muted" style="font-size:12px; margin-top:6px;">
+            (Se borrará si el email y teléfono del formulario coinciden con los usados al reseñar)
+          </div>
+    </div>
+`;
+
       reviewsList.appendChild(div);
     });
 

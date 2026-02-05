@@ -156,6 +156,79 @@ document.addEventListener("DOMContentLoaded", () => {
   const adminLoadDay = document.getElementById("adminLoadDay");
   const adminAppointments = document.getElementById("adminAppointments");
 
+  const tabPending = document.getElementById("tabPending");
+  const tabDone = document.getElementById("tabDone");
+
+  let adminViewMode = "pending"; // "pending" | "done"
+
+  async function loadAdminDay(dateStr){
+  if (!dateStr) {
+    setAdminStatus("Elige una fecha.", true);
+    return;
+  }
+
+  // Si estamos en "Pendientes", primero traemos pendientes y auto-finalizamos las vencidas
+  if (adminViewMode === "pending") {
+    setAdminStatus("Cargando pendientes…");
+    adminAppointments.innerHTML = "";
+
+    const { data, error } = await db.rpc("admin_get_pending_for_day", { p_date: dateStr });
+    if (error){
+      setAdminStatus("Error: " + error.message, true);
+      return;
+    }
+
+    // Auto-finalizar por tiempo (solo hoy)
+    const todayISO = new Date().toISOString().slice(0,10);
+    const shouldAutoFinish = (dateStr === todayISO);
+
+    if (shouldAutoFinish && (data || []).length) {
+      const now = new Date();
+      const nowMin = now.getHours()*60 + now.getMinutes();
+      const GRACE_MIN = 3; // margen
+
+      // marcamos como terminadas las que ya han pasado su hora fin
+      for (const r of data) {
+        const start = String(r.appt_time).slice(0,5);
+        const end = computeEndTime(start, r.duration);
+        const endMin = timeToMinutes(end);
+
+        if (endMin + GRACE_MIN <= nowMin) {
+          await db.rpc("admin_complete_appointment", { p_id: r.id });
+        }
+      }
+
+      // recargamos pendientes ya "limpias"
+      const res2 = await db.rpc("admin_get_pending_for_day", { p_date: dateStr });
+      if (res2.error){
+        setAdminStatus("Error: " + res2.error.message, true);
+        return;
+      }
+      setAdminStatus(`Pendientes para ${dateStr}`);
+      renderAdminAppointments(res2.data, "pending");
+      return;
+    }
+
+    setAdminStatus(`Pendientes para ${dateStr}`);
+    renderAdminAppointments(data, "pending");
+    return;
+  }
+
+  // Vista "Terminadas"
+  setAdminStatus("Cargando terminadas…");
+  adminAppointments.innerHTML = "";
+
+  const { data, error } = await db.rpc("admin_get_done_for_day", { p_date: dateStr });
+  if (error){
+    setAdminStatus("Error: " + error.message, true);
+    return;
+  }
+
+  setAdminStatus(`Terminadas para ${dateStr}`);
+  renderAdminAppointments(data, "done");
+}
+
+
   function isAdminRoute() {
     const url = new URL(window.location.href);
     return url.searchParams.get("admin") === "1";
@@ -704,63 +777,90 @@ END:VCALENDAR`;
     return true;
   }
 
-  function renderAppointments() {
-    const list = loadAppointments();
-    list.sort((a, b) => new Date(`${a.date}T${a.time}:00`) - new Date(`${b.date}T${b.time}:00`));
+function renderAdminAppointments(rows, mode){
+  adminAppointments.innerHTML = "";
 
-    apptList.innerHTML = "";
+  if (!rows || rows.length === 0) {
+    adminAppointments.innerHTML = `<div class="admin-empty">No hay citas ${mode === "done" ? "terminadas" : "pendientes"}.</div>`;
+    return;
+  }
 
-    if (list.length === 0) {
-      const li = document.createElement("li");
-      li.className = "appt";
-      li.innerHTML = `
-        <div class="appt__left">
-          <div class="appt__title">Aún no hay citas guardadas</div>
-          <div class="appt__meta">Cuando reserves, aparecerán aquí.</div>
-        </div>
-      `;
-      apptList.appendChild(li);
-      return;
+  rows.forEach(r => {
+    const who = `${r.name || ""} ${r.last_name || ""}`.trim() || "(Sin nombre)";
+
+    const start = String(r.appt_time).slice(0,5);
+    const end = computeEndTime(start, r.duration);
+    const when = `${start}–${end}`;
+
+    const meta = [
+      r.service || "",
+      r.duration ? `${r.duration} min` : "",
+      r.phone ? `📞 ${r.phone}` : "",
+      r.email ? `✉️ ${r.email}` : ""
+    ].filter(Boolean).join(" · ");
+
+    const div = document.createElement("div");
+    div.className = "admin-item";
+
+    div.innerHTML = `
+      <div class="admin-time">${when}</div>
+      <div style="flex:1;">
+        <div class="admin-name">${who}</div>
+        <div class="admin-meta">${meta}</div>
+        ${r.notes ? `<div class="admin-notes">📝 ${r.notes}</div>` : ""}
+        ${mode === "done" && r.completed_at ? `<div class="admin-meta">✅ Terminada: ${new Date(r.completed_at).toLocaleString("es-ES")}</div>` : ""}
+      </div>
+      ${
+        mode === "pending"
+          ? `<div><button class="smallBtn" data-action="done">Terminado</button></div>`
+          : ``
+      }
+    `;
+
+    if (mode === "pending") {
+      div.querySelector('[data-action="done"]').addEventListener("click", async () => {
+        const { data, error } = await db.rpc("admin_complete_appointment", { p_id: r.id });
+        if (error) {
+          setAdminStatus("Error: " + error.message, true);
+          return;
+        }
+        if (!data?.[0]?.ok) {
+          setAdminStatus(data?.[0]?.message || "No se pudo completar", true);
+          return;
+        }
+        await loadAdminDay(adminDay.value);
+      });
     }
 
-    list.forEach((a) => {
-      const li = document.createElement("li");
-      li.className = "appt";
+    adminAppointments.appendChild(div);
+  });
+}
+tabPending?.addEventListener("click", async () => {
+  adminViewMode = "pending";
+  tabPending.classList.add("is-active");
+  tabDone.classList.remove("is-active");
+  await loadAdminDay(adminDay.value);
+});
 
-      const priceTxt = a.price != null ? ` · ${formatEuro(a.price)}` : "";
-      const durTxt = a.duration ? ` · ${a.duration} min` : "";
-      const extra = a.notes ? ` · Nota: ${a.notes}` : "";
+tabDone?.addEventListener("click", async () => {
+  adminViewMode = "done";
+  tabDone.classList.add("is-active");
+  tabPending.classList.remove("is-active");
+  await loadAdminDay(adminDay.value);
+});
+let adminTimer = null;
+function startAdminTimer(){
+  if (adminTimer) clearInterval(adminTimer);
+  adminTimer = setInterval(() => {
+    if (adminDay?.value) loadAdminDay(adminDay.value);
+  }, 60_000);
+}
+function stopAdminTimer(){
+  if (adminTimer) clearInterval(adminTimer);
+  adminTimer = null;
+}
 
-      li.innerHTML = `
-        <div class="appt__left">
-          <div class="appt__title">${a.name} ${a.lastName}</div>
-          <div class="appt__meta">${niceSpanishDate(a.date)} · ${a.time} · ${a.service}${priceTxt}${durTxt}${extra}</div>
-        </div>
-        <div class="appt__actions">
-          <button class="smallBtn" data-action="ics">.ics</button>
-          <button class="smallBtn" data-action="delete">Anular</button>
-        </div>
-      `;
 
-      li.querySelector('[data-action="ics"]').addEventListener("click", () => downloadICS(a));
-
-      li.querySelector('[data-action="delete"]').addEventListener("click", async () => {
-        const ok = await cancelInDB(a);
-        if (!ok) return;
-
-        const next = loadAppointments().filter((x) => x.id !== a.id);
-        saveAppointments(next);
-
-        await refreshRemoteBusyWide();
-        renderAppointments();
-        renderFreeSlots();
-        populateTimes();
-        setAlert("Cita anulada ✅ (y marcada como anulada en la base de datos).", "ok");
-      });
-
-      apptList.appendChild(li);
-    });
-  }
 
   // =====================
   // Disponibilidad rápida

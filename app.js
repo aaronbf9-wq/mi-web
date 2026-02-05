@@ -218,15 +218,16 @@ document.addEventListener("DOMContentLoaded", () => {
   setAdminStatus("Cargando terminadas…");
   adminAppointments.innerHTML = "";
 
-  const { data, error } = await db.rpc("admin_get_done_for_day", { p_date: dateStr });
-  if (error){
-    setAdminStatus("Error: " + error.message, true);
+  const doneRes = await db.rpc("admin_get_done_for_day", { p_date: dateStr });
+  if (doneRes.error){
+    setAdminStatus("Error: " + doneRes.error.message, true);
     return;
   }
 
   setAdminStatus(`Terminadas para ${dateStr}`);
-  renderAdminAppointments(data, "done");
-}
+  renderAdminAppointments(doneRes.data, "done");
+
+  }
 
 
   function isAdminRoute() {

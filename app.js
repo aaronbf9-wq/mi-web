@@ -270,7 +270,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return minutesToHHMM(start + (Number(durationMin)||0));
   }
 
-  function renderAdminAppointments(rows) {
+  function renderAdminAppointments(rows, mode = "pending") {
     if (!adminAppointments) return;
 
     adminAppointments.innerHTML = "";
@@ -355,7 +355,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
     setAdminStatus(`Citas activas para ${dateStr}`);
-    renderAdminAppointments(data);
+    renderAdminAppointments(data, mode="pending");
   }
 
   async function enterAdminModeUI() {

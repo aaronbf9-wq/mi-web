@@ -523,5 +523,25 @@
     <!-- IMPORTANTE: Supabase ANTES que app.js -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="app.js?v=11" defer></script>
+
+    <script>
+  (function(){
+    const url = new URL(window.location.href);
+    const isAdminMode = url.searchParams.get('admin') === '1';
+
+    const panel = document.getElementById('adminPanel');
+    const closeBtn = document.getElementById('adminClose');
+
+    if (panel && isAdminMode) panel.style.display = 'block';
+
+    if (closeBtn){
+      closeBtn.addEventListener('click', () => {
+        panel.style.display = 'none';
+      });
+    }
+  })();
+</script>
+
+
   </body>
 </html>

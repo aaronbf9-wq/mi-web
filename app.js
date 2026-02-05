@@ -179,6 +179,23 @@ document.addEventListener("DOMContentLoaded", () => {
     return String(t).slice(0,5);
   }
 
+  function timeToMinutes(t) { // "10:15:00" o "10:15"
+    const s = String(t).slice(0,5);
+    const [h,m] = s.split(":").map(Number);
+    return h*60 + m;
+  }
+
+  function minutesToHHMM(min){
+    const h = Math.floor(min/60);
+    const m = min % 60;
+    return String(h).padStart(2,"0") + ":" + String(m).padStart(2,"0");
+  }
+
+  function computeEndTime(startTime, durationMin){
+    const start = timeToMinutes(startTime);
+    return minutesToHHMM(start + (Number(durationMin)||0));
+  }
+
   function renderAdminAppointments(rows) {
     if (!adminAppointments) return;
 
@@ -194,7 +211,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const time = fmtTime(r.appt_time || r.time);
       const service = r.service || "";
       const duration = r.duration ? `${r.duration} min` : "";
-      const meta = [service, duration, r.phone ? `📞 ${r.phone}` : "", r.email ? `✉️ ${r.email}` : ""]
+      const start = fmtTime(r.appt_time || r.time || r.slot_time);
+      const end   = computeEndTime(start, r.duration);
+      const when  = `${start}–${end}`;
+
+      const meta = [when, service, duration, r.phone ? `📞 ${r.phone}` : "", r.email ? `✉️ ${r.email}` : ""]
         .filter(Boolean).join(" · ");
 
       const div = document.createElement("div");

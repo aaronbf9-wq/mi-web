@@ -141,6 +141,133 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+  // ========= ADMIN UI (oculto salvo ?admin=1) =========
+const adminPanel = document.getElementById("adminPanel");
+const adminLoginBox = document.getElementById("adminLoginBox");
+const adminAppBox = document.getElementById("adminAppBox");
+const adminLoginBtn = document.getElementById("adminLoginBtn");
+const adminLogoutBtn = document.getElementById("adminLogoutBtn");
+const adminEmail = document.getElementById("adminEmail");
+const adminPassword = document.getElementById("adminPassword");
+const adminLoginMsg = document.getElementById("adminLoginMsg");
+const adminDate = document.getElementById("adminDate");
+const adminLoadBtn = document.getElementById("adminLoadBtn");
+const adminList = document.getElementById("adminList");
+
+function isAdminRoute() {
+  const url = new URL(window.location.href);
+  return url.searchParams.get("admin") === "1";
+}
+
+async function checkIsAdmin() {
+  // Esto llama a tu función SQL public.is_admin()
+  const { data, error } = await db.rpc("is_admin");
+  if (error) return false;
+  return !!data;
+}
+
+function renderAdminAppointments(rows) {
+  if (!rows || !rows.length) {
+    adminList.innerHTML = "<p>No hay citas activas ese día.</p>";
+    return;
+  }
+
+  const html = rows.map(r => {
+    const who = `${r.name || ""} ${r.last_name || ""}`.trim();
+    const meta = [
+      r.appt_time ? String(r.appt_time).slice(0,5) : "",
+      r.service || "",
+      r.duration ? `${r.duration} min` : "",
+      r.phone ? `📞 ${r.phone}` : "",
+      r.email ? `✉️ ${r.email}` : "",
+      r.notes ? `📝 ${r.notes}` : "",
+    ].filter(Boolean).join(" · ");
+    return `<div style="padding:10px;border:1px solid rgba(255,255,255,.15);border-radius:10px;margin:8px 0;">
+      <strong>${who || "(Sin nombre)"}</strong><div style="opacity:.9">${meta}</div>
+    </div>`;
+  }).join("");
+
+  adminList.innerHTML = html;
+}
+
+async function enterAdminModeUI() {
+  if (!adminPanel) return;
+
+  // Solo mostramos panel si estás en ruta admin (?admin=1)
+  if (!isAdminRoute()) return;
+
+  adminPanel.style.display = "block";
+
+  // Fecha por defecto hoy
+  const today = new Date();
+  const pad2 = (n) => String(n).padStart(2, "0");
+  adminDate.value = `${today.getFullYear()}-${pad2(today.getMonth()+1)}-${pad2(today.getDate())}`;
+
+  // Si ya hay sesión, comprobamos si es admin
+  const { data: { session } } = await db.auth.getSession();
+  if (session) {
+    const ok = await checkIsAdmin();
+    if (ok) {
+      adminLoginBox.style.display = "none";
+      adminAppBox.style.display = "block";
+    } else {
+      // Está logueado pero no es admin
+      await db.auth.signOut();
+    }
+  }
+}
+
+adminLoginBtn?.addEventListener("click", async () => {
+  adminLoginMsg.textContent = "";
+
+  const email = adminEmail.value.trim();
+  const password = adminPassword.value;
+
+  if (!email || !password) {
+    adminLoginMsg.textContent = "Completa email y contraseña.";
+    return;
+  }
+
+  const { error } = await db.auth.signInWithPassword({ email, password });
+  if (error) {
+    adminLoginMsg.textContent = "Login inválido.";
+    return;
+  }
+
+  const ok = await checkIsAdmin();
+  if (!ok) {
+    adminLoginMsg.textContent = "Tu usuario no es admin.";
+    await db.auth.signOut();
+    return;
+  }
+
+  adminLoginBox.style.display = "none";
+  adminAppBox.style.display = "block";
+  adminLoginMsg.textContent = "";
+});
+
+adminLogoutBtn?.addEventListener("click", async () => {
+  await db.auth.signOut();
+  adminAppBox.style.display = "none";
+  adminLoginBox.style.display = "block";
+  adminList.innerHTML = "";
+});
+
+adminLoadBtn?.addEventListener("click", async () => {
+  adminList.innerHTML = "Cargando...";
+  const date = adminDate.value;
+  const { data, error } = await db.rpc("admin_get_appointments_for_day", { p_date: date });
+  if (error) {
+    adminList.innerHTML = "Error: " + error.message;
+    return;
+  }
+  renderAdminAppointments(data);
+});
+
+// Inicia panel admin si toca
+enterAdminModeUI();
+
+
   // ========= Remote busy cache (BD) =========
   const remoteBusyByDate = new Map(); // iso -> [{start,end}]
   async function refreshRemoteBusyWide() {

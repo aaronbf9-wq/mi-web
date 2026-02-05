@@ -270,15 +270,23 @@ document.addEventListener("DOMContentLoaded", () => {
     return minutesToHHMM(start + (Number(durationMin)||0));
   }
 
-  function renderAdminAppointments(rows) {
+  function renderAdminAppointments(rows, mode) {
     if (!adminAppointments) return;
 
     adminAppointments.innerHTML = "";
 
-    if (!rows || rows.length === 0) {
-      adminAppointments.innerHTML = `<div class="admin-empty">No hay citas activas ese día.</div>`;
+    
+    if (!rows || !rows.length) {
+      const msg = (mode === "done")
+        ? "No hay citas terminadas."
+        : "No hay citas pendientes.";
+      adminAppointments.innerHTML = `<p class="admin-empty">${msg}</p>`;
       return;
     }
+
+  // ... el resto de tu render
+}
+
 
     rows.forEach(r => {
       const who = `${r.name || ""} ${r.last_name || ""}`.trim() || "(Sin nombre)";

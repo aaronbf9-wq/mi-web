@@ -40,8 +40,19 @@
         Entrar
       </button>
     </form>
-
+// Si el login es correcto, se muestra esta sección con las citas del día
     <div id="adminStatus" class="admin-status" style="display:none;"></div>
+
+    <div class="admin-box">
+  <div class="admin-row">
+    <label>Ver citas del día:</label>
+    <input id="adminDay" type="date" />
+    <button id="adminLoadDay" type="button">Cargar</button>
+  </div>
+
+  <div id="adminAppointments" class="admin-list"></div>
+</div>
+
   </div>
 </section>
 

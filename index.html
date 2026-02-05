@@ -48,7 +48,7 @@
     <!-- Citas -->
     <div id="adminBox" class="admin-box" style="display:none;">
       <div class="admin-row">
-        
+
         <div class="admin-tabs">
           <button id="tabPending" class="admin-tab is-active" type="button">Pendientes</button>
           <button id="tabDone" class="admin-tab" type="button">Terminadas</button>
@@ -294,7 +294,7 @@
             </div>
 
             <!-- FORM -->
-            <form class="form reveal" id="bookingForm">
+            <form class="form reveal" id="bookingForm" onsubmit="event.preventDefault(); return false;">
               <div class="form__row">
                 <label>
                   Nombre

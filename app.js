@@ -1158,6 +1158,13 @@ END:VCALENDAR`;
         return;
       }
 
+      // ✅ NUEVO: bloquear reserva si la hora ya pasó (por si alguien manipula el HTML)
+      if (isPastStartTimeForToday(date, time)) {
+        setAlert("No puedes reservar una hora que ya ha pasado.", "bad");
+        return;
+      } 
+
+
       const { data, error } = await db.rpc("book_appointment", {
         p_name: name,
         p_last_name: lastName,

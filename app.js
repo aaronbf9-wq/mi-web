@@ -196,74 +196,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let adminViewMode = "pending"; // "pending" | "done"
 
-  async function loadAdminDay(dateStr) {
-    if (!dateStr) {
-      setAdminStatus("Elige una fecha.", true);
-      return;
-    }
-
-    // Si estamos en "Pendientes", primero traemos pendientes y auto-finalizamos las vencidas
-    if (adminViewMode === "pending") {
-      setAdminStatus("Cargando pendientes…");
-      adminAppointments.innerHTML = "";
-
-      const { data, error } = await db.rpc("admin_get_pending_for_day", { p_date: dateStr });
-      if (error) {
-        setAdminStatus("Error: " + error.message, true);
-        return;
-      }
-
-      // Auto-finalizar por tiempo (solo hoy)
-      const todayISO = new Date().toISOString().slice(0, 10);
-      const shouldAutoFinish = dateStr === todayISO;
-
-      if (shouldAutoFinish && (data || []).length) {
-        const now = new Date();
-        const nowMin = now.getHours() * 60 + now.getMinutes();
-        const GRACE_MIN = 3; // margen
-
-        // marcamos como terminadas las que ya han pasado su hora fin
-        for (const r of data) {
-          const start = String(r.appt_time).slice(0, 5);
-          const end = computeEndTime(start, r.duration);
-          const endMin = timeToMinutes(end);
-
-          if (endMin + GRACE_MIN <= nowMin) {
-            await db.rpc("admin_complete_appointment", { p_id: r.id });
-          }
-        }
-
-        // recargamos pendientes ya "limpias"
-        const res2 = await db.rpc("admin_get_pending_for_day", { p_date: dateStr });
-        if (res2.error) {
-          setAdminStatus("Error: " + res2.error.message, true);
-          return;
-        }
-
-        setAdminStatus(`Pendientes para ${dateStr}`);
-        renderAdminAppointments(res2.data, "pending");
-        return;
-      }
-
-      setAdminStatus(`Pendientes para ${dateStr}`);
-      renderAdminAppointments(data, "pending");
-      return;
-    }
-
-    // Vista "Terminadas"
-    setAdminStatus("Cargando terminadas…");
-    adminAppointments.innerHTML = "";
-
-    const doneRes = await db.rpc("admin_get_done_for_day", { p_date: dateStr });
-    if (doneRes.error) {
-      setAdminStatus("Error: " + doneRes.error.message, true);
-      return;
-    }
-
-    setAdminStatus(`Terminadas para ${dateStr}`);
-    renderAdminAppointments(doneRes.data, "done");
-  }
-
   function isAdminRoute() {
     const url = new URL(window.location.href);
     return url.searchParams.get("admin") === "1";
@@ -282,13 +214,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return !!data;
   }
 
-  function fmtTime(t) {
-    if (!t) return "";
-    return String(t).slice(0, 5);
-  }
-
   function timeToMinutes(t) {
-    // "10:15:00" o "10:15"
     const s = String(t).slice(0, 5);
     const [h, m] = s.split(":").map(Number);
     return h * 60 + m;
@@ -306,6 +232,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function renderAdminAppointments(rows, mode = "pending") {
+    if (!adminAppointments) return;
     adminAppointments.innerHTML = "";
 
     if (!rows || rows.length === 0) {
@@ -356,7 +283,7 @@ document.addEventListener("DOMContentLoaded", () => {
       `;
 
       if (mode === "pending") {
-        div.querySelector('[data-action="done"]').addEventListener("click", async () => {
+        div.querySelector('[data-action="done"]')?.addEventListener("click", async () => {
           const { data, error } = await db.rpc("admin_complete_appointment", { p_id: r.id });
 
           if (error) {
@@ -374,6 +301,69 @@ document.addEventListener("DOMContentLoaded", () => {
 
       adminAppointments.appendChild(div);
     });
+  }
+
+  async function loadAdminDay(dateStr) {
+    if (!dateStr) {
+      setAdminStatus("Elige una fecha.", true);
+      return;
+    }
+
+    if (adminViewMode === "pending") {
+      setAdminStatus("Cargando pendientes…");
+      adminAppointments.innerHTML = "";
+
+      const { data, error } = await db.rpc("admin_get_pending_for_day", { p_date: dateStr });
+      if (error) {
+        setAdminStatus("Error: " + error.message, true);
+        return;
+      }
+
+      const todayISO = new Date().toISOString().slice(0, 10);
+      const shouldAutoFinish = dateStr === todayISO;
+
+      if (shouldAutoFinish && (data || []).length) {
+        const now = new Date();
+        const nowMin = now.getHours() * 60 + now.getMinutes();
+        const GRACE_MIN = 3;
+
+        for (const r of data) {
+          const start = String(r.appt_time).slice(0, 5);
+          const end = computeEndTime(start, r.duration);
+          const endMin = timeToMinutes(end);
+
+          if (endMin + GRACE_MIN <= nowMin) {
+            await db.rpc("admin_complete_appointment", { p_id: r.id });
+          }
+        }
+
+        const res2 = await db.rpc("admin_get_pending_for_day", { p_date: dateStr });
+        if (res2.error) {
+          setAdminStatus("Error: " + res2.error.message, true);
+          return;
+        }
+
+        setAdminStatus(`Pendientes para ${dateStr}`);
+        renderAdminAppointments(res2.data, "pending");
+        return;
+      }
+
+      setAdminStatus(`Pendientes para ${dateStr}`);
+      renderAdminAppointments(data, "pending");
+      return;
+    }
+
+    setAdminStatus("Cargando terminadas…");
+    adminAppointments.innerHTML = "";
+
+    const doneRes = await db.rpc("admin_get_done_for_day", { p_date: dateStr });
+    if (doneRes.error) {
+      setAdminStatus("Error: " + doneRes.error.message, true);
+      return;
+    }
+
+    setAdminStatus(`Terminadas para ${dateStr}`);
+    renderAdminAppointments(doneRes.data, "done");
   }
 
   tabPending?.addEventListener("click", async () => {
@@ -406,15 +396,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!adminPanel) return;
     if (!isAdminRoute()) return;
 
-    // panel ya se muestra en el script del HTML, pero lo dejamos por si acaso
     adminPanel.style.display = "block";
 
-    // Fecha hoy por defecto
     const today = new Date();
     const todayStr = `${today.getFullYear()}-${pad2(today.getMonth() + 1)}-${pad2(today.getDate())}`;
     if (adminDay) adminDay.value = todayStr;
 
-    // Si hay sesión, comprobar admin y mostrar directamente
     const {
       data: { session },
     } = await db.auth.getSession();
@@ -427,6 +414,7 @@ document.addEventListener("DOMContentLoaded", () => {
         adminLogout.style.display = "inline-flex";
         setAdminStatus("✅ Admin logueado");
         await loadAdminDay(adminDay.value);
+        startAdminTimer();
       } else {
         await db.auth.signOut();
       }
@@ -633,6 +621,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Alerts
   // =====================
   function setAlert(text, type) {
+    if (!alertBox) return;
     alertBox.textContent = text || "";
     alertBox.classList.remove("alert--ok", "alert--bad");
     if (type === "ok") alertBox.classList.add("alert--ok");
@@ -640,9 +629,89 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // =====================
+  // Mis próximas citas (LOCAL)  ✅ (FALTABA)
+  // =====================
+  function renderAppointments() {
+    if (!apptList) return;
+
+    const list = loadAppointments();
+
+    // ordena por fecha/hora
+    list.sort((a, b) => {
+      const aKey = `${a.date} ${a.time}`;
+      const bKey = `${b.date} ${b.time}`;
+      return aKey.localeCompare(bKey);
+    });
+
+    apptList.innerHTML = "";
+
+    if (!list.length) {
+      apptList.innerHTML = `<li class="apptItem muted">No tienes citas guardadas en este dispositivo.</li>`;
+      return;
+    }
+
+    list.forEach((a) => {
+      const li = document.createElement("li");
+      li.className = "apptItem";
+
+      const dur = a.duration ?? getServiceDuration(a.service);
+      const endMin = parseTimeToMinutes(a.time) + dur;
+      const end = minutesToTime(endMin);
+
+      const priceTxt = a.price != null ? ` · ${formatEuro(a.price)}` : "";
+
+      li.innerHTML = `
+        <div class="apptTop">
+          <div><strong>${niceSpanishDate(a.date)}</strong> · ${a.time}–${end}</div>
+          <div class="muted">${a.service}${priceTxt}</div>
+        </div>
+        <div class="muted" style="margin-top:6px;">
+          ${a.name} ${a.lastName} · 📞 ${a.phone} · ✉️ ${a.email}
+          ${a.notes ? `<div style="margin-top:6px;">📝 ${a.notes}</div>` : ""}
+        </div>
+        <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="smallBtn" type="button" data-action="ics">Descargar .ics</button>
+          <button class="smallBtn" type="button" data-action="wa">WhatsApp</button>
+          <button class="smallBtn" type="button" data-action="cancel">Anular</button>
+        </div>
+      `;
+
+      li.querySelector('[data-action="ics"]')?.addEventListener("click", () => downloadICS(a));
+      li.querySelector('[data-action="wa"]')?.addEventListener("click", () => {
+        const link = buildWhatsAppLink(a);
+        if (link) window.location.href = link;
+      });
+
+      li.querySelector('[data-action="cancel"]')?.addEventListener("click", async () => {
+        const ok = confirm("¿Seguro que quieres anular esta cita?");
+        if (!ok) return;
+
+        // intenta anular en BD si existe db_id
+        const okDb = await cancelInDB(a);
+        if (!okDb) return;
+
+        // borra en local
+        const after = loadAppointments().filter((x) => x.id !== a.id);
+        saveAppointments(after);
+
+        await refreshRemoteBusyWide();
+        renderAppointments();
+        renderFreeSlots();
+        populateTimes();
+
+        setAlert("Cita anulada ✅", "ok");
+      });
+
+      apptList.appendChild(li);
+    });
+  }
+
+  // =====================
   // Calendar render
   // =====================
   function renderCalendar() {
+    if (!monthLabel || !grid) return;
+
     const monthName = view.toLocaleDateString("es-ES", { month: "long", year: "numeric" });
     monthLabel.textContent = monthName[0].toUpperCase() + monthName.slice(1);
     grid.innerHTML = "";
@@ -652,6 +721,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const jsDay = firstDayOfMonth.getDay();
     const mondayIndex = (jsDay + 6) % 7;
+
     for (let i = 0; i < mondayIndex; i++) {
       const blank = document.createElement("div");
       blank.className = "day day--off";
@@ -692,6 +762,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Times
   // =====================
   function populateTimes() {
+    if (!timeSelect) return;
     timeSelect.innerHTML = "";
 
     if (!selectedDate) {
@@ -741,12 +812,12 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  serviceSelect.addEventListener("change", () => {
+  serviceSelect?.addEventListener("change", () => {
     if (selectedDate) populateTimes();
   });
 
   // =====================
-  // Appointments UI
+  // Appointments UI (ICS/WA helpers)
   // =====================
   function toICSDateTime(dateISO, timeHHMM) {
     const [y, m, d] = dateISO.split("-").map(Number);
@@ -844,8 +915,8 @@ END:VCALENDAR`;
   function enablePostCreateActions(appt) {
     lastCreatedAppointment = appt;
     const wa = buildWhatsAppLink(appt);
-    whatsBtn.disabled = !wa;
-    downloadIcsBtn.disabled = false;
+    if (whatsBtn) whatsBtn.disabled = !wa;
+    if (downloadIcsBtn) downloadIcsBtn.disabled = false;
   }
 
   async function cancelInDB(appt) {
@@ -893,7 +964,11 @@ END:VCALENDAR`;
       if (SHOW_SCARCITY_ONLY && remaining > SCARCITY_WARNING) continue;
 
       const severity =
-        remaining <= SCARCITY_CRITICAL ? "critical" : remaining <= SCARCITY_WARNING ? "warning" : "ok";
+        remaining <= SCARCITY_CRITICAL
+          ? "critical"
+          : remaining <= SCARCITY_WARNING
+          ? "warning"
+          : "ok";
 
       const freeRanges = getFreeRangesForDay(d);
       const pct = totalSlots > 0 ? Math.round((remaining / totalSlots) * 100) : 0;
@@ -920,7 +995,7 @@ END:VCALENDAR`;
         <button class="smallBtn" type="button">Elegir</button>
       `;
 
-      top.querySelector("button").addEventListener("click", () => {
+      top.querySelector("button")?.addEventListener("click", () => {
         selectedDate = d;
         dateValue.value = iso;
         selectedDateText.textContent = niceSpanishDate(iso);
@@ -975,17 +1050,17 @@ END:VCALENDAR`;
   // =====================
   // Events
   // =====================
-  prevMonthBtn.addEventListener("click", () => {
+  prevMonthBtn?.addEventListener("click", () => {
     view = new Date(view.getFullYear(), view.getMonth() - 1, 1);
     renderCalendar();
   });
 
-  nextMonthBtn.addEventListener("click", () => {
+  nextMonthBtn?.addEventListener("click", () => {
     view = new Date(view.getFullYear(), view.getMonth() + 1, 1);
     renderCalendar();
   });
 
-  whatsBtn.addEventListener("click", () => {
+  whatsBtn?.addEventListener("click", () => {
     if (!lastCreatedAppointment) return;
     const wa = buildWhatsAppLink(lastCreatedAppointment);
 
@@ -996,7 +1071,7 @@ END:VCALENDAR`;
     window.location.href = wa;
   });
 
-  downloadIcsBtn.addEventListener("click", () => {
+  downloadIcsBtn?.addEventListener("click", () => {
     if (!lastCreatedAppointment) return;
     downloadICS(lastCreatedAppointment);
   });
@@ -1004,88 +1079,92 @@ END:VCALENDAR`;
   // =====================
   // Guardar cita (BD + local)
   // =====================
-  form.addEventListener("submit", async (e) => {
+  form?.addEventListener("submit", async (e) => {
     e.preventDefault();
 
-    const name = nameInput.value.trim();
-    const lastName = lastNameInput.value.trim();
-    const phone = phoneInput.value.trim();
-    const email = emailInput.value.trim();
-    const service = serviceSelect.value;
-    const notes = notesInput.value.trim();
-    const date = dateValue.value;
-    const time = timeSelect.value;
+    try {
+      const name = nameInput.value.trim();
+      const lastName = lastNameInput.value.trim();
+      const phone = phoneInput.value.trim();
+      const email = emailInput.value.trim();
+      const service = serviceSelect.value;
+      const notes = notesInput.value.trim();
+      const date = dateValue.value;
+      const time = timeSelect.value;
 
-    if (!name || !lastName || !phone || !email || !service || !date || !time) {
-      setAlert("Completa nombre, apellidos, teléfono, email, servicio, día y hora.", "bad");
-      return;
+      if (!name || !lastName || !phone || !email || !service || !date || !time) {
+        setAlert("Completa nombre, apellidos, teléfono, email, servicio, día y hora.", "bad");
+        return;
+      }
+
+      const duration = getServiceDuration(service);
+      const price = getServicePrice(service);
+
+      const busy = getBusyIntervalsForISO(date);
+      const start = parseTimeToMinutes(time);
+      const end = start + duration;
+      if (busy.some((b) => start < b.end && end > b.start)) {
+        setAlert("Ese horario ya está ocupado. Elige otra hora.", "bad");
+        return;
+      }
+
+      const { data, error } = await db.rpc("book_appointment", {
+        p_name: name,
+        p_last_name: lastName,
+        p_email: email,
+        p_phone: phone,
+        p_date: date,
+        p_time: time,
+        p_service: service,
+        p_duration: duration,
+        p_notes: notes || null,
+      });
+
+      if (error) {
+        setAlert("Error al guardar en BD: " + error.message, "bad");
+        return;
+      }
+      if (!data?.[0]?.ok) {
+        setAlert(data?.[0]?.message || "No se pudo guardar la cita.", "bad");
+        return;
+      }
+
+      const dbId = data?.[0]?.id || null;
+
+      const appt = {
+        id: crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()),
+        db_id: dbId,
+        name,
+        lastName,
+        phone,
+        email,
+        service,
+        notes,
+        date,
+        time,
+        duration,
+        price,
+        createdAt: new Date().toISOString(),
+      };
+
+      const list = loadAppointments();
+      list.push(appt);
+      saveAppointments(list);
+
+      await refreshRemoteBusyWide();
+      renderAppointments();
+      renderFreeSlots();
+      enablePostCreateActions(appt);
+
+      setAlert("Cita guardada ✅ (también en la base de datos).", "ok");
+      populateTimes();
+
+      // opcional: bajar a la lista
+      document.getElementById("apptList")?.scrollIntoView({ behavior: "smooth" });
+    } catch (err) {
+      console.error(err);
+      setAlert("Se produjo un error en el script. Mira la consola.", "bad");
     }
-
-    const duration = getServiceDuration(service);
-    const price = getServicePrice(service);
-
-    // bloquea solapes con lo que ya hay (BD + local)
-    const busy = getBusyIntervalsForISO(date);
-    const start = parseTimeToMinutes(time);
-    const end = start + duration;
-    if (busy.some((b) => start < b.end && end > b.start)) {
-      setAlert("Ese horario ya está ocupado. Elige otra hora.", "bad");
-      return;
-    }
-
-    // 1) INSERT en BD (por RPC)
-    const { data, error } = await db.rpc("book_appointment", {
-      p_name: name,
-      p_last_name: lastName,
-      p_email: email,
-      p_phone: phone,
-      p_date: date,
-      p_time: time,
-      p_service: service,
-      p_duration: duration,
-      p_notes: notes || null,
-    });
-
-    if (error) {
-      setAlert("Error al guardar en BD: " + error.message, "bad");
-      return;
-    }
-    if (!data?.[0]?.ok) {
-      setAlert(data?.[0]?.message || "No se pudo guardar la cita.", "bad");
-      return;
-    }
-
-    const dbId = data?.[0]?.id || null;
-
-    // 2) Guardar en local también (para UI del dispositivo)
-    const appt = {
-      id: crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()),
-      db_id: dbId,
-      name,
-      lastName,
-      phone,
-      email,
-      service,
-      notes,
-      date,
-      time,
-      duration,
-      price,
-      createdAt: new Date().toISOString(),
-    };
-
-    const list = loadAppointments();
-    list.push(appt);
-    saveAppointments(list);
-
-    // refresca busy + UI
-    await refreshRemoteBusyWide();
-    renderAppointments();
-    renderFreeSlots();
-    enablePostCreateActions(appt);
-
-    setAlert("Cita guardada ✅ (también en la base de datos).", "ok");
-    populateTimes();
   });
 
   document.querySelectorAll(".serviceBtn").forEach((b) => {
@@ -1157,7 +1236,6 @@ END:VCALENDAR`;
     (data || []).forEach((r) => {
       const div = document.createElement("div");
       div.className = "reviewItem";
-
       const dt = new Date(r.created_at);
 
       div.innerHTML = `
@@ -1178,7 +1256,7 @@ END:VCALENDAR`;
         </div>
       `;
 
-      div.querySelector('[data-action="deleteReview"]').addEventListener("click", async () => {
+      div.querySelector('[data-action="deleteReview"]')?.addEventListener("click", async () => {
         const reviewId = div.querySelector('[data-action="deleteReview"]').dataset.id;
 
         const em = (reviewEmail?.value || "").trim();
@@ -1246,7 +1324,6 @@ END:VCALENDAR`;
       return;
     }
 
-    // ✅ BD valida: (cita existe) AND (NO anulada) AND (en el pasado)
     const { data, error } = await db.rpc("submit_review", {
       p_name: n,
       p_last_name: ln,
@@ -1277,7 +1354,7 @@ END:VCALENDAR`;
   (async () => {
     await refreshRemoteBusyWide();
     renderCalendar();
-    renderAppointments();
+    renderAppointments(); // ✅ ahora existe
     renderFreeSlots();
     populateTimes();
     await loadPublicReviews();

@@ -769,3 +769,29 @@ section[id]{ scroll-margin-top: 92px; }
   .admin-form{ grid-template-columns: 1fr; }
   .admin-btn{ width: 100%; }
 }
+
+.admin-box { margin-top: 12px; }
+.admin-row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.admin-list { margin-top: 14px; display:flex; flex-direction:column; gap:10px; }
+
+.admin-card{
+  display:flex; gap:14px;
+  padding:12px 14px;
+  border-radius:16px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.10);
+  backdrop-filter: blur(10px);
+}
+
+.admin-time{
+  min-width:70px;
+  font-size:20px;
+  font-weight:700;
+}
+
+.admin-name{ font-weight:700; font-size:16px; }
+.admin-meta{ opacity:.85; font-size:13px; margin-top:2px; }
+.admin-notes{ margin-top:8px; font-size:13px; opacity:.9; }
+
+.admin-error{ color:#ffb3b3; }
+.admin-empty{ opacity:.85; }

@@ -1,1 +1,655 @@
-<!doctype html> <html lang="es"> <head> <meta charset="utf-8" /> <meta name="viewport" content="width=device-width, initial-scale=1" /> <title>EL COLISEUM BARBERSHOP</title> <!-- cache-busting: sube el número si no se actualiza --> <link rel="stylesheet" href="style.css?v=11" /> </head> <body> <!-- ADMIN BAR (arriba del todo) --> <section id="adminPanel" class="admin-wrap" style="display:none;"> <div class="admin-card"> <div class="admin-head"> <div> <div class="admin-title">Panel del peluquero</div> <div class="admin-sub">Accede para ver y gestionar las citas del día.</div> </div> <div style="display:flex; gap:10px; align-items:center;"> <button id="adminLogout" class="admin-ghost-btn" type="button" title="Cerrar sesión" style="display:none;"> Salir </button> <button id="adminClose" class="admin-ghost-btn" type="button" title="Ocultar panel">✕</button> </div> </div> <form id="adminLoginForm" class="admin-form"> <label class="admin-field"> <span>Email</span> <input id="adminEmail" type="email" autocomplete="username" placeholder="admin@peluqueria.com" required /> </label> <label class="admin-field"> <span>Contraseña</span> <input id="adminPassword" type="password" autocomplete="current-password" placeholder="••••••••" required /> </label> <button id="adminLoginBtn" class="admin-btn" type="submit">Entrar</button> </form> <!-- Estado --> <div id="adminStatus" class="admin-status" style="display:none;"></div> <!-- Citas --> <div id="adminBox" class="admin-box" style="display:none;"> <div class="admin-row"> <div class="admin-tabs"> <button id="tabPending" class="admin-tab is-active" type="button">Pendientes</button> <button id="tabDone" class="admin-tab" type="button">Terminadas</button> </div> <label class="muted" style="font-size:13px;">Ver citas del día:</label> <input id="adminDay" type="date" /> <button id="adminLoadDay" class="admin-btn" type="button" style="height:44px;">Cargar</button> </div> <div id="adminAppointments" class="admin-list"></div> </div> </div> </section> <header class="topbar"> <div class="container topbar__inner"> <div class="brand"> <div class="brand__mark">⚔️</div> <div class="brand__text"> <div class="brand__title">EL COLISEUM</div> <div class="brand__subtitle">Barbershop</div> </div> </div> <nav class="nav"> <a href="#inicio">Inicio</a> <a href="#servicios">Servicios</a> <a href="#reservar">Reservar</a> <a href="#resenas">Reseñas</a> <a href="#contacto">Contacto</a> </nav> <a class="btn btn--primary btn--small" href="#reservar">Reservar</a> </div> </header> <main id="inicio"> <!-- HERO --> <section class="hero"> <div class="container hero__grid"> <div class="hero__content reveal"> <p class="badge">🔥 Barbería para hombres 🔥</p> <h1 class="title">EL COLISEUM</h1> <p class="subtitle"> No es una simple barbería: <strong>esto es una FAMILIA</strong>. Corte, barba y estilo con actitud. </p> <div class="hero__cta"> <a class="btn btn--primary" href="#reservar">Agendar cita</a> <a class="btn btn--ghost" href="#servicios">Ver servicios</a> </div> <div class="hero__note"> <span class="dot"></span> <span>Confirmación por WhatsApp + recordatorio para tu calendario</span> </div> </div> <div class="hero__media reveal"> <div class="mediaFrame"> <img src="https://d375139ucebi94.cloudfront.net/region2/es/90583/biz_photo/5f911b2f750447edabbd093ec191ed-el-coliseum-biz-photo-deba6456f9fd41799eeb8d41bc45fe-booksy.jpeg" alt="EL COLISEUM" loading="lazy" /> </div> </div> </div> </section> <!-- SERVICIOS --> <section class="section section--alt" id="servicios"> <div class="container"> <div class="section__head reveal"> <h2>Servicios</h2> <p class="muted">Elige tu servicio. Pulsa “Reservar” para seleccionarlo y bajar al calendario.</p> </div> <div class="cards"> <article class="card reveal"> <h3>Corte degradado</h3> <p class="muted">Degradado / estilo personalizado.</p> <div class="card__row"> <span class="pill">30 min</span> <span class="price">12,50€</span> </div> <div class="card__actions"> <button class="btn btn--secondary btn--small serviceBtn" type="button" data-service="Corte degradado"> Reservar </button> </div> </article> <article class="card reveal"> <h3>Recorte de la barba</h3> <p class="muted">Perfilado rápido + acabado limpio.</p> <div class="card__row"> <span class="pill">15 min</span> <span class="price">6,00€</span> </div> <div class="card__actions"> <button class="btn btn--secondary btn--small serviceBtn" type="button" data-service="Recorte de la barba"> Reservar </button> </div> </article> <article class="card reveal"> <h3>Rapado</h3> <p class="muted">Rapado limpio y rápido.</p> <div class="card__row"> <span class="pill">15 min</span> <span class="price">6,00€</span> </div> <div class="card__actions"> <button class="btn btn--secondary btn--small serviceBtn" type="button" data-service="Rapado"> Reservar </button> </div> </article> <article class="card reveal"> <h3>Corte clásico</h3> <p class="muted">Corte clásico de toda la vida.</p> <div class="card__row"> <span class="pill">15 min</span> <span class="price">10,00€</span> </div> <div class="card__actions"> <button class="btn btn--secondary btn--small serviceBtn" type="button" data-service="Corte clásico"> Reservar </button> </div> </article> <article class="card reveal"> <h3>Pelo y barba</h3> <p class="muted">El completo: corte + barba.</p> <div class="card__row"> <span class="pill">45 min</span> <span class="price">16,00€</span> </div> <div class="card__actions"> <button class="btn btn--secondary btn--small serviceBtn" type="button" data-service="Pelo y barba"> Reservar </button> </div> </article> <article class="card reveal"> <h3>Rapado y barba</h3> <p class="muted">Rapado + barba en un toque.</p> <div class="card__row"> <span class="pill">15 min</span> <span class="price">10,00€</span> </div> <div class="card__actions"> <button class="btn btn--secondary btn--small serviceBtn" type="button" data-service="Rapado y barba"> Reservar </button> </div> </article> <article class="card reveal"> <h3>Corte niño hasta 5 años</h3> <p class="muted">Corte para peques (hasta 5 años).</p> <div class="card__row"> <span class="pill">20 min</span> <span class="price">10,00€</span> </div> <div class="card__actions"> <button class="btn btn--secondary btn--small serviceBtn" type="button" data-service="Corte niño hasta 5 años"> Reservar </button> </div> </article> <article class="card reveal"> <h3>Degradado + diseño + cejas</h3> <p class="muted">Degradado con diseño + cejas.</p> <div class="card__row"> <span class="pill">30 min</span> <span class="price">15,00€</span> </div> <div class="card__actions"> <button class="btn btn--secondary btn--small serviceBtn" type="button" data-service="Degradado + diseño + cejas"> Reservar </button> </div> </article> <article class="card reveal"> <h3>Pelo y barba, cejas y diseño</h3> <p class="muted">Completo + cejas + diseño.</p> <div class="card__row"> <span class="pill">45 min</span> <span class="price">20,00€</span> </div> <div class="card__actions"> <button class="btn btn--secondary btn--small serviceBtn" type="button" data-service="Pelo y barba, cejas y diseño"> Reservar </button> </div> </article> </div> </div> </section> <!-- RESERVAS --> <section class="section" id="reservar"> <div class="container"> <div class="section__head reveal"> <h2>Agenda tu cita</h2> <p class="muted">Selecciona día y hora. Se guardará en este dispositivo y podrás enviarla por WhatsApp.</p> </div> <div class="booking"> <!-- CALENDARIO --> <div class="calendar reveal" aria-label="Calendario"> <div class="calendar__top"> <button class="iconBtn" id="prevMonth" type="button" aria-label="Mes anterior">‹</button> <div class="calendar__label" id="monthLabel">Mes</div> <button class="iconBtn" id="nextMonth" type="button" aria-label="Mes siguiente">›</button> </div> <div class="calendar__weekdays" aria-hidden="true"> <div>L</div><div>M</div><div>X</div><div>J</div><div>V</div><div>S</div><div>D</div> </div> <div class="calendar__grid" id="calendarGrid"></div> <div class="calendar__hint muted"> <span class="legend"> <span class="legendDot legendDot--ok"></span> Disponible </span> <span class="legend"> <span class="legendDot legendDot--off"></span> Cerrado / pasado </span> </div> </div> <!-- FORM --> <form class="form reveal" id="bookingForm"> <div class="form__row"> <label> Nombre <input id="name" type="text" placeholder="Tu nombre" required /> </label> <label> Apellidos <input id="lastName" type="text" placeholder="Tus apellidos" required /> </label> </div> <div class="form__row"> <label> Teléfono <input id="phone" type="tel" placeholder="Ej: 6XXXXXXXX" required /> </label> <label> Email <input id="email" type="email" placeholder="tu@email.com" required /> </label> </div> <div class="form__row"> <label> Servicio <select id="service" required> <option value="" selected disabled>Selecciona un servicio</option> <option value="Corte degradado">Corte degradado · 12,50€ · 30 min</option> <option value="Recorte de la barba">Recorte de la barba · 6,00€ · 15 min</option> <option value="Rapado">Rapado · 6,00€ · 15 min</option> <option value="Corte clásico">Corte clásico · 10,00€ · 15 min</option> <option value="Pelo y barba">Pelo y barba · 16,00€ · 45 min</option> <option value="Rapado y barba">Rapado y barba · 10,00€ · 15 min</option> <option value="Corte niño hasta 5 años">Corte niño hasta 5 años · 10,00€ · 20 min</option> <option value="Degradado + diseño + cejas">Degradado + diseño + cejas · 15,00€ · 30 min</option> <option value="Pelo y barba, cejas y diseño">Pelo y barba, cejas y diseño · 20,00€ · 45 min</option> </select> </label> <label> Hora disponible <select id="time" required> <option value="" selected disabled>Elige un día primero</option> </select> </label> </div> <label> Nota (opcional) <input id="notes" type="text" placeholder="Ej: degradado medio / barba corta..." /> </label> <div class="form__selected"> <div> <div class="muted">Día seleccionado</div> <div class="big" id="selectedDateText">—</div> </div> <div class="form__actions"> <button class="btn btn--primary" type="submit">Confirmar cita</button> <button class="btn btn--secondary" id="whatsBtn" type="button" disabled>Enviar por WhatsApp</button> </div> </div> <div class="alert" id="alert" role="status" aria-live="polite"></div> <div class="miniLinks"> <button class="miniLink" id="downloadIcsBtn" type="button" disabled> Descargar recordatorio (.ics) </button> </div> <input id="dateValue" type="hidden" /> </form> </div> <!-- HUECOS LIBRES --> <div class="panel panel--lift" id="huecos"> <div class="section__head reveal"> <h3>Disponibilidad rápida</h3> <p class="muted"> Te avisamos si algún día se está quedando sin huecos (🔥 pocos / ⚠️ se está llenando). </p> </div> <div class="freeSlotsGrid" id="freeSlotsGrid"></div> </div> <!-- LISTA DE CITAS --> <section class="section section--tight"> <div class="container"> <div class="section__head reveal"> <h3>Mis próximas citas (en este dispositivo)</h3> <p class="muted"> Esto se guarda en tu navegador. (Además se guarda en la base de datos). </p> </div> <ul class="apptList reveal" id="apptList"></ul> </div> </section> </div> </section> <!-- RESEÑAS --> <section class="section section--alt" id="resenas"> <div class="container"> <div class="section__head reveal"> <h2>Reseñas</h2> <p class="muted">Solo podrás reseñar si tu cita existe, no fue anulada y ya está en el pasado.</p> </div> <div class="reviewsGrid"> <!-- FORM RESEÑA --> <form class="card reveal reviewForm" id="reviewForm"> <h3>Dejar una reseña</h3> <p class="muted">Usa los mismos datos con los que reservaste.</p> <div class="form__row"> <label> Nombre <input id="reviewName" type="text" required /> </label> <label> Apellidos <input id="reviewLastName" type="text" required /> </label> </div> <div class="form__row"> <label> Teléfono <input id="reviewPhone" type="tel" required /> </label> <label> Email <input id="reviewEmail" type="email" required /> </label> </div> <label> Valoración <div class="starRating" id="starRating" aria-label="Valoración de 1 a 5"> <button type="button" class="star" data-value="1" aria-label="1 estrella">★</button> <button type="button" class="star" data-value="2" aria-label="2 estrellas">★</button> <button type="button" class="star" data-value="3" aria-label="3 estrellas">★</button> <button type="button" class="star" data-value="4" aria-label="4 estrellas">★</button> <button type="button" class="star" data-value="5" aria-label="5 estrellas">★</button> </div> </label> <label> Comentario <textarea id="reviewComment" rows="4" placeholder="¿Qué tal fue tu experiencia?" required></textarea> </label> <button class="btn btn--primary" type="submit">Enviar reseña</button> <div class="alert" id="reviewAlert" role="status" aria-live="polite"></div> </form> <!-- LISTADO RESEÑAS --> <div class="card reveal"> <h3>Últimas reseñas</h3> <div class="reviewsList" id="reviewsList"></div> </div> </div> </div> </section> <!-- SORPRESA --> <section class="section section--alt" id="sorpresa"> <div class="container"> <div class="section__head reveal"> <h2>Una sorpresa</h2> <p class="muted">Si es tu primera vez cortándote conmigo...</p> </div> <div class="surprise reveal"> <button id="btn" class="btn btn--ghost">Haz clic si no te lo quieres perder!!</button> <p id="msg" class="muted"></p> </div> </div> </section> <!-- CONTACTO --> <section class="section" id="contacto"> <div class="container"> <div class="section__head reveal"> <h2>Contacto</h2> <p class="muted">Edita estos datos con los reales.</p> </div> <div class="contactGrid"> <div class="card reveal"> <h3>Ubicación</h3> <a class="muted" href="https://www.google.com/maps/search/?api=1&query=C%2F%20CAYETANO%20GARCIA%20MARTIN%2C%201%2C%2010600%2C%20Plasencia" target="_blank" rel="noopener" style="display:block; text-decoration:none;" > C/ CAYETANO GARCIA MARTIN, 1<br /> Nº 1, 10600, Plasencia (Cáceres) </a> <a class="btn btn--secondary btn--small" href="https://www.google.com/maps/search/?api=1&query=C%2F%20CAYETANO%20GARCIA%20MARTIN%2C%201%2C%2010600%2C%20Plasencia" target="_blank" rel="noopener" > Ver en Google Maps </a> </div> <div class="card reveal"> <h3>Horario</h3> <p class="muted">L, X, J, V: 10:00–14:00 / 16:00–21:00</p> <p class="muted">Martes: 10:00-14:00 /16:00–20:00</p> <p class="muted">S: 11:00–13:00</p> <p class="muted">D: cerrado</p> </div> <div class="card reveal"> <h3>Reserva rápida</h3> <p class="muted">Reserva aquí y confirma por WhatsApp en un clic.</p> <a class="btn btn--primary" href="#reservar">Agendar ahora</a> </div> </div> </div> </section> <a class="floatCta" href="#reservar" aria-label="Reservar cita">Reservar</a> </main> <footer class="footer"> <div class="container footer__inner"> <small>© 2026 — EL COLISEUM BARBERSHOP</small> <small class="muted">Hecho con ❤️ en HTML/CSS/JS</small> </div> </footer> <!-- IMPORTANTE: Supabase ANTES que app.js --> <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script> <script src="app.js?v=11" defer></script> <script> (function(){ const url = new URL(window.location.href); const isAdminMode = url.searchParams.get('admin') === '1'; const panel = document.getElementById('adminPanel'); const closeBtn = document.getElementById('adminClose'); if (panel && isAdminMode) panel.style.display = 'block'; if (closeBtn){ closeBtn.addEventListener('click', () => { panel.style.display = 'none'; }); } })(); </script> </body> </html>
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>EL COLISEUM BARBERSHOP</title>
+
+    <!-- cache-busting: sube el número si no se actualiza -->
+    <link rel="stylesheet" href="style.css?v=11" />
+  </head>
+
+  <body>
+    <!-- ADMIN BAR (arriba del todo) -->
+    <section id="adminPanel" class="admin-wrap" style="display: none;">
+      <div class="admin-card">
+        <div class="admin-head">
+          <div>
+            <div class="admin-title">Panel del peluquero</div>
+            <div class="admin-sub">Accede para ver y gestionar las citas del día.</div>
+          </div>
+
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <button
+              id="adminLogout"
+              class="admin-ghost-btn"
+              type="button"
+              title="Cerrar sesión"
+              style="display: none;"
+            >
+              Salir
+            </button>
+
+            <button id="adminClose" class="admin-ghost-btn" type="button" title="Ocultar panel">
+              ✕
+            </button>
+          </div>
+        </div>
+
+        <form id="adminLoginForm" class="admin-form">
+          <label class="admin-field">
+            <span>Email</span>
+            <input
+              id="adminEmail"
+              type="email"
+              autocomplete="username"
+              placeholder="admin@peluqueria.com"
+              required
+            />
+          </label>
+
+          <label class="admin-field">
+            <span>Contraseña</span>
+            <input
+              id="adminPassword"
+              type="password"
+              autocomplete="current-password"
+              placeholder="••••••••"
+              required
+            />
+          </label>
+
+          <button id="adminLoginBtn" class="admin-btn" type="submit">Entrar</button>
+        </form>
+
+        <!-- Estado -->
+        <div id="adminStatus" class="admin-status" style="display: none;"></div>
+
+        <!-- Citas -->
+        <div id="adminBox" class="admin-box" style="display: none;">
+          <div class="admin-row">
+            <div class="admin-tabs">
+              <button id="tabPending" class="admin-tab is-active" type="button">Pendientes</button>
+              <button id="tabDone" class="admin-tab" type="button">Terminadas</button>
+            </div>
+
+            <label class="muted" style="font-size: 13px;">Ver citas del día:</label>
+            <input id="adminDay" type="date" />
+            <button
+              id="adminLoadDay"
+              class="admin-btn"
+              type="button"
+              style="height: 44px;"
+            >
+              Cargar
+            </button>
+          </div>
+
+          <div id="adminAppointments" class="admin-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <header class="topbar">
+      <div class="container topbar__inner">
+        <div class="brand">
+          <div class="brand__mark">⚔️</div>
+          <div class="brand__text">
+            <div class="brand__title">EL COLISEUM</div>
+            <div class="brand__subtitle">Barbershop</div>
+          </div>
+        </div>
+
+        <nav class="nav">
+          <a href="#inicio">Inicio</a>
+          <a href="#servicios">Servicios</a>
+          <a href="#reservar">Reservar</a>
+          <a href="#resenas">Reseñas</a>
+          <a href="#contacto">Contacto</a>
+        </nav>
+
+        <a class="btn btn--primary btn--small" href="#reservar">Reservar</a>
+      </div>
+    </header>
+
+    <main id="inicio">
+      <!-- HERO -->
+      <section class="hero">
+        <div class="container hero__grid">
+          <div class="hero__content reveal">
+            <p class="badge">🔥 Barbería para hombres 🔥</p>
+            <h1 class="title">EL COLISEUM</h1>
+            <p class="subtitle">
+              No es una simple barbería: <strong>esto es una FAMILIA</strong>. Corte, barba y
+              estilo con actitud.
+            </p>
+
+            <div class="hero__cta">
+              <a class="btn btn--primary" href="#reservar">Agendar cita</a>
+              <a class="btn btn--ghost" href="#servicios">Ver servicios</a>
+            </div>
+
+            <div class="hero__note">
+              <span class="dot"></span>
+              <span>Confirmación por WhatsApp + recordatorio para tu calendario</span>
+            </div>
+          </div>
+
+          <div class="hero__media reveal">
+            <div class="mediaFrame">
+              <img
+                src="https://d375139ucebi94.cloudfront.net/region2/es/90583/biz_photo/5f911b2f750447edabbd093ec191ed-el-coliseum-biz-photo-deba6456f9fd41799eeb8d41bc45fe-booksy.jpeg"
+                alt="EL COLISEUM"
+                loading="lazy"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SERVICIOS -->
+      <section class="section section--alt" id="servicios">
+        <div class="container">
+          <div class="section__head reveal">
+            <h2>Servicios</h2>
+            <p class="muted">
+              Elige tu servicio. Pulsa “Reservar” para seleccionarlo y bajar al calendario.
+            </p>
+          </div>
+
+          <div class="cards">
+            <article class="card reveal">
+              <h3>Corte degradado</h3>
+              <p class="muted">Degradado / estilo personalizado.</p>
+              <div class="card__row">
+                <span class="pill">30 min</span>
+                <span class="price">12,50€</span>
+              </div>
+              <div class="card__actions">
+                <button
+                  class="btn btn--secondary btn--small serviceBtn"
+                  type="button"
+                  data-service="Corte degradado"
+                >
+                  Reservar
+                </button>
+              </div>
+            </article>
+
+            <article class="card reveal">
+              <h3>Recorte de la barba</h3>
+              <p class="muted">Perfilado rápido + acabado limpio.</p>
+              <div class="card__row">
+                <span class="pill">15 min</span>
+                <span class="price">6,00€</span>
+              </div>
+              <div class="card__actions">
+                <button
+                  class="btn btn--secondary btn--small serviceBtn"
+                  type="button"
+                  data-service="Recorte de la barba"
+                >
+                  Reservar
+                </button>
+              </div>
+            </article>
+
+            <article class="card reveal">
+              <h3>Rapado</h3>
+              <p class="muted">Rapado limpio y rápido.</p>
+              <div class="card__row">
+                <span class="pill">15 min</span>
+                <span class="price">6,00€</span>
+              </div>
+              <div class="card__actions">
+                <button
+                  class="btn btn--secondary btn--small serviceBtn"
+                  type="button"
+                  data-service="Rapado"
+                >
+                  Reservar
+                </button>
+              </div>
+            </article>
+
+            <article class="card reveal">
+              <h3>Corte clásico</h3>
+              <p class="muted">Corte clásico de toda la vida.</p>
+              <div class="card__row">
+                <span class="pill">15 min</span>
+                <span class="price">10,00€</span>
+              </div>
+              <div class="card__actions">
+                <button
+                  class="btn btn--secondary btn--small serviceBtn"
+                  type="button"
+                  data-service="Corte clásico"
+                >
+                  Reservar
+                </button>
+              </div>
+            </article>
+
+            <article class="card reveal">
+              <h3>Pelo y barba</h3>
+              <p class="muted">El completo: corte + barba.</p>
+              <div class="card__row">
+                <span class="pill">45 min</span>
+                <span class="price">16,00€</span>
+              </div>
+              <div class="card__actions">
+                <button
+                  class="btn btn--secondary btn--small serviceBtn"
+                  type="button"
+                  data-service="Pelo y barba"
+                >
+                  Reservar
+                </button>
+              </div>
+            </article>
+
+            <article class="card reveal">
+              <h3>Rapado y barba</h3>
+              <p class="muted">Rapado + barba en un toque.</p>
+              <div class="card__row">
+                <span class="pill">15 min</span>
+                <span class="price">10,00€</span>
+              </div>
+              <div class="card__actions">
+                <button
+                  class="btn btn--secondary btn--small serviceBtn"
+                  type="button"
+                  data-service="Rapado y barba"
+                >
+                  Reservar
+                </button>
+              </div>
+            </article>
+
+            <article class="card reveal">
+              <h3>Corte niño hasta 5 años</h3>
+              <p class="muted">Corte para peques (hasta 5 años).</p>
+              <div class="card__row">
+                <span class="pill">20 min</span>
+                <span class="price">10,00€</span>
+              </div>
+              <div class="card__actions">
+                <button
+                  class="btn btn--secondary btn--small serviceBtn"
+                  type="button"
+                  data-service="Corte niño hasta 5 años"
+                >
+                  Reservar
+                </button>
+              </div>
+            </article>
+
+            <article class="card reveal">
+              <h3>Degradado + diseño + cejas</h3>
+              <p class="muted">Degradado con diseño + cejas.</p>
+              <div class="card__row">
+                <span class="pill">30 min</span>
+                <span class="price">15,00€</span>
+              </div>
+              <div class="card__actions">
+                <button
+                  class="btn btn--secondary btn--small serviceBtn"
+                  type="button"
+                  data-service="Degradado + diseño + cejas"
+                >
+                  Reservar
+                </button>
+              </div>
+            </article>
+
+            <article class="card reveal">
+              <h3>Pelo y barba, cejas y diseño</h3>
+              <p class="muted">Completo + cejas + diseño.</p>
+              <div class="card__row">
+                <span class="pill">45 min</span>
+                <span class="price">20,00€</span>
+              </div>
+              <div class="card__actions">
+                <button
+                  class="btn btn--secondary btn--small serviceBtn"
+                  type="button"
+                  data-service="Pelo y barba, cejas y diseño"
+                >
+                  Reservar
+                </button>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- RESERVAS -->
+      <section class="section" id="reservar">
+        <div class="container">
+          <div class="section__head reveal">
+            <h2>Agenda tu cita</h2>
+            <p class="muted">
+              Selecciona día y hora. Se guardará en este dispositivo y podrás enviarla por WhatsApp.
+            </p>
+          </div>
+
+          <div class="booking">
+            <!-- CALENDARIO -->
+            <div class="calendar reveal" aria-label="Calendario">
+              <div class="calendar__top">
+                <button class="iconBtn" id="prevMonth" type="button" aria-label="Mes anterior">
+                  ‹
+                </button>
+                <div class="calendar__label" id="monthLabel">Mes</div>
+                <button class="iconBtn" id="nextMonth" type="button" aria-label="Mes siguiente">
+                  ›
+                </button>
+              </div>
+
+              <div class="calendar__weekdays" aria-hidden="true">
+                <div>L</div>
+                <div>M</div>
+                <div>X</div>
+                <div>J</div>
+                <div>V</div>
+                <div>S</div>
+                <div>D</div>
+              </div>
+
+              <div class="calendar__grid" id="calendarGrid"></div>
+
+              <div class="calendar__hint muted">
+                <span class="legend">
+                  <span class="legendDot legendDot--ok"></span> Disponible
+                </span>
+                <span class="legend">
+                  <span class="legendDot legendDot--off"></span> Cerrado / pasado
+                </span>
+              </div>
+            </div>
+
+            <!-- FORM -->
+            <form class="form reveal" id="bookingForm">
+              <div class="form__row">
+                <label>
+                  Nombre
+                  <input id="name" type="text" placeholder="Tu nombre" required />
+                </label>
+
+                <label>
+                  Apellidos
+                  <input id="lastName" type="text" placeholder="Tus apellidos" required />
+                </label>
+              </div>
+
+              <div class="form__row">
+                <label>
+                  Teléfono
+                  <input id="phone" type="tel" placeholder="Ej: 6XXXXXXXX" required />
+                </label>
+
+                <label>
+                  Email
+                  <input id="email" type="email" placeholder="tu@email.com" required />
+                </label>
+              </div>
+
+              <div class="form__row">
+                <label>
+                  Servicio
+                  <select id="service" required>
+                    <option value="" selected disabled>Selecciona un servicio</option>
+                    <option value="Corte degradado">Corte degradado · 12,50€ · 30 min</option>
+                    <option value="Recorte de la barba">Recorte de la barba · 6,00€ · 15 min</option>
+                    <option value="Rapado">Rapado · 6,00€ · 15 min</option>
+                    <option value="Corte clásico">Corte clásico · 10,00€ · 15 min</option>
+                    <option value="Pelo y barba">Pelo y barba · 16,00€ · 45 min</option>
+                    <option value="Rapado y barba">Rapado y barba · 10,00€ · 15 min</option>
+                    <option value="Corte niño hasta 5 años">Corte niño hasta 5 años · 10,00€ · 20 min</option>
+                    <option value="Degradado + diseño + cejas">
+                      Degradado + diseño + cejas · 15,00€ · 30 min
+                    </option>
+                    <option value="Pelo y barba, cejas y diseño">
+                      Pelo y barba, cejas y diseño · 20,00€ · 45 min
+                    </option>
+                  </select>
+                </label>
+
+                <label>
+                  Hora disponible
+                  <select id="time" required>
+                    <option value="" selected disabled>Elige un día primero</option>
+                  </select>
+                </label>
+              </div>
+
+              <label>
+                Nota (opcional)
+                <input id="notes" type="text" placeholder="Ej: degradado medio / barba corta..." />
+              </label>
+
+              <div class="form__selected">
+                <div>
+                  <div class="muted">Día seleccionado</div>
+                  <div class="big" id="selectedDateText">—</div>
+                </div>
+
+                <div class="form__actions">
+                  <button class="btn btn--primary" type="submit">Confirmar cita</button>
+                  <button class="btn btn--secondary" id="whatsBtn" type="button" disabled>
+                    Enviar por WhatsApp
+                  </button>
+                </div>
+              </div>
+
+              <div class="alert" id="alert" role="status" aria-live="polite"></div>
+
+              <div class="miniLinks">
+                <button class="miniLink" id="downloadIcsBtn" type="button" disabled>
+                  Descargar recordatorio (.ics)
+                </button>
+              </div>
+
+              <input id="dateValue" type="hidden" />
+            </form>
+          </div>
+
+          <!-- HUECOS LIBRES -->
+          <div class="panel panel--lift" id="huecos">
+            <div class="section__head reveal">
+              <h3>Disponibilidad rápida</h3>
+              <p class="muted">
+                Te avisamos si algún día se está quedando sin huecos (🔥 pocos / ⚠️ se está llenando).
+              </p>
+            </div>
+            <div class="freeSlotsGrid" id="freeSlotsGrid"></div>
+          </div>
+
+          <!-- LISTA DE CITAS -->
+          <section class="section section--tight">
+            <div class="container">
+              <div class="section__head reveal">
+                <h3>Mis próximas citas (en este dispositivo)</h3>
+                <p class="muted">Esto se guarda en tu navegador. (Además se guarda en la base de datos).</p>
+              </div>
+
+              <ul class="apptList reveal" id="apptList"></ul>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <!-- RESEÑAS -->
+      <section class="section section--alt" id="resenas">
+        <div class="container">
+          <div class="section__head reveal">
+            <h2>Reseñas</h2>
+            <p class="muted">
+              Solo podrás reseñar si tu cita existe, no fue anulada y ya está en el pasado.
+            </p>
+          </div>
+
+          <div class="reviewsGrid">
+            <!-- FORM RESEÑA -->
+            <form class="card reveal reviewForm" id="reviewForm">
+              <h3>Dejar una reseña</h3>
+              <p class="muted">Usa los mismos datos con los que reservaste.</p>
+
+              <div class="form__row">
+                <label>
+                  Nombre
+                  <input id="reviewName" type="text" required />
+                </label>
+
+                <label>
+                  Apellidos
+                  <input id="reviewLastName" type="text" required />
+                </label>
+              </div>
+
+              <div class="form__row">
+                <label>
+                  Teléfono
+                  <input id="reviewPhone" type="tel" required />
+                </label>
+
+                <label>
+                  Email
+                  <input id="reviewEmail" type="email" required />
+                </label>
+              </div>
+
+              <label>
+                Valoración
+                <div class="starRating" id="starRating" aria-label="Valoración de 1 a 5">
+                  <button type="button" class="star" data-value="1" aria-label="1 estrella">★</button>
+                  <button type="button" class="star" data-value="2" aria-label="2 estrellas">★</button>
+                  <button type="button" class="star" data-value="3" aria-label="3 estrellas">★</button>
+                  <button type="button" class="star" data-value="4" aria-label="4 estrellas">★</button>
+                  <button type="button" class="star" data-value="5" aria-label="5 estrellas">★</button>
+                </div>
+              </label>
+
+              <label>
+                Comentario
+                <textarea
+                  id="reviewComment"
+                  rows="4"
+                  placeholder="¿Qué tal fue tu experiencia?"
+                  required
+                ></textarea>
+              </label>
+
+              <button class="btn btn--primary" type="submit">Enviar reseña</button>
+
+              <div class="alert" id="reviewAlert" role="status" aria-live="polite"></div>
+            </form>
+
+            <!-- LISTADO RESEÑAS -->
+            <div class="card reveal">
+              <h3>Últimas reseñas</h3>
+              <div class="reviewsList" id="reviewsList"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SORPRESA -->
+      <section class="section section--alt" id="sorpresa">
+        <div class="container">
+          <div class="section__head reveal">
+            <h2>Una sorpresa</h2>
+            <p class="muted">Si es tu primera vez cortándote conmigo...</p>
+          </div>
+
+          <div class="surprise reveal">
+            <button id="btn" class="btn btn--ghost">Haz clic si no te lo quieres perder!!</button>
+            <p id="msg" class="muted"></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- CONTACTO -->
+      <section class="section" id="contacto">
+        <div class="container">
+          <div class="section__head reveal">
+            <h2>Contacto</h2>
+            <p class="muted">Edita estos datos con los reales.</p>
+          </div>
+
+          <div class="contactGrid">
+            <div class="card reveal">
+              <h3>Ubicación</h3>
+
+              <a
+                class="muted"
+                href="https://www.google.com/maps/search/?api=1&query=C%2F%20CAYETANO%20GARCIA%20MARTIN%2C%201%2C%2010600%2C%20Plasencia"
+                target="_blank"
+                rel="noopener"
+                style="display: block; text-decoration: none;"
+              >
+                C/ CAYETANO GARCIA MARTIN, 1<br />
+                Nº 1, 10600, Plasencia (Cáceres)
+              </a>
+
+              <a
+                class="btn btn--secondary btn--small"
+                href="https://www.google.com/maps/search/?api=1&query=C%2F%20CAYETANO%20GARCIA%20MARTIN%2C%201%2C%2010600%2C%20Plasencia"
+                target="_blank"
+                rel="noopener"
+              >
+                Ver en Google Maps
+              </a>
+            </div>
+
+            <div class="card reveal">
+              <h3>Horario</h3>
+              <p class="muted">L, X, J, V: 10:00–14:00 / 16:00–21:00</p>
+              <p class="muted">Martes: 10:00-14:00 /16:00–20:00</p>
+              <p class="muted">S: 11:00–13:00</p>
+              <p class="muted">D: cerrado</p>
+            </div>
+
+            <div class="card reveal">
+              <h3>Reserva rápida</h3>
+              <p class="muted">Reserva aquí y confirma por WhatsApp en un clic.</p>
+              <a class="btn btn--primary" href="#reservar">Agendar ahora</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <a class="floatCta" href="#reservar" aria-label="Reservar cita">Reservar</a>
+    </main>
+
+    <footer class="footer">
+      <div class="container footer__inner">
+        <small>© 2026 — EL COLISEUM BARBERSHOP</small>
+        <small class="muted">Hecho con ❤️ en HTML/CSS/JS</small>
+      </div>
+    </footer>
+
+    <!-- IMPORTANTE: Supabase ANTES que app.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js?v=11" defer></script>
+
+    <script>
+      (function () {
+        const url = new URL(window.location.href);
+        const isAdminMode = url.searchParams.get("admin") === "1";
+
+        const panel = document.getElementById("adminPanel");
+        const closeBtn = document.getElementById("adminClose");
+
+        if (panel && isAdminMode) panel.style.display = "block";
+
+        if (closeBtn) {
+          closeBtn.addEventListener("click", () => {
+            panel.style.display = "none";
+         ;
+          });
+        }
+      })();
+    </script>
+  </body>
+</html>

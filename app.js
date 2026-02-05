@@ -228,6 +228,33 @@ document.addEventListener("DOMContentLoaded", () => {
           ${r.notes ? `<div class="admin-notes">📝 ${r.notes}</div>` : ""}
         </div>
       `;
+
+      div.innerHTML = `
+        <div class="admin-time">${when}</div>
+        <div style="flex:1;">
+          <div class="admin-name">${who}</div>
+          <div class="admin-meta">${meta}</div>
+            ${r.notes ? `<div class="admin-notes">📝 ${r.notes}</div>` : ""}
+        </div>
+        <div>
+          <button class="smallBtn" data-action="done">Terminado</button>
+        </div>
+      `;
+      
+      div.querySelector('[data-action="done"]').addEventListener("click", async () => {
+        const { data, error } = await db.rpc("admin_complete_appointment", { p_id: r.id });
+        if (error) {
+          setAdminStatus("Error: " + error.message, true);
+          return;
+        }
+        if (!data?.[0]?.ok) {
+          setAdminStatus(data?.[0]?.message || "No se pudo completar", true);
+          return;
+        }
+        // recarga lista del día
+        await loadAdminDay(adminDay.value);
+      });
+
       adminAppointments.appendChild(div);
     });
   }

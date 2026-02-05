@@ -146,6 +146,25 @@ function subtractIntervals(openRange, busyIntervals) {
   return res;
 }
 
+function getNowMinutes() {
+  const now = new Date();
+  return now.getHours() * 60 + now.getMinutes();
+}
+
+function isTodayISO(iso) {
+  const todayISO = new Date().toISOString().slice(0, 10);
+  return iso === todayISO;
+}
+
+// Devuelve true si esa hora (start) ya está en el pasado para HOY
+function isPastStartTimeForToday(dateISO, startHHMM) {
+  if (!isTodayISO(dateISO)) return false;
+  const startMin = parseTimeToMinutes(startHHMM);
+  return startMin <= getNowMinutes();
+}
+
+
+
 // =====================
 // Local storage
 // =====================

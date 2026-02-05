@@ -784,6 +784,59 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+
+  function isToday(date) {
+    const now = new Date();
+    return sameDay(date, now);
+  }
+
+  // Devuelve la última hora (en minutos) a la que se podría EMPEZAR una cita ese día,
+  // teniendo en cuenta los rangos HOURS y una duración (durationMin).
+  function latestStartMinuteForDay(date, durationMin) {
+    const ranges = getRangesForDate(date);
+    if (!ranges.length) return null;
+
+    let latest = null;
+    for (const r of ranges) {
+      const start = parseTimeToMinutes(r.start);
+      const end = parseTimeToMinutes(r.end);
+      const lastStart = end - durationMin;
+      if (lastStart >= start) {
+        latest = latest === null ? lastStart : Math.max(latest, lastStart);
+      }
+    }
+    return latest;
+  }
+
+  // Si es HOY y ya hemos pasado la última hora razonable para empezar cita, hoy queda “off”
+  function isTooLateToBookToday(date, durationMin) {
+    if (!isToday(date)) return false;
+
+    const latest = latestStartMinuteForDay(date, durationMin);
+    if (latest === null) return true; // hoy no abre
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+
+    return nowMin > latest;
+  }
+
+  // Devuelve true si existe AL MENOS un hueco disponible ese día
+  function hasAnyAvailabilityForDay(date, durationMin) {
+    if (isPast(date) || isClosed(date)) return false;
+    if (isTooLateToBookToday(date, durationMin)) return false;
+
+    const iso = toISODate(date);
+    const busy = getBusyIntervalsForISO(iso);
+    const slots = generateSlotsForDate(date, durationMin);
+
+    return slots.some((time) => {
+      const start = parseTimeToMinutes(time);
+      const end = start + durationMin;
+      return !busy.some((b) => start < b.end && end > b.start);
+    });
+  }
+
+
   // =====================
   // Calendar render
   // =====================
@@ -822,10 +875,12 @@ document.addEventListener("DOMContentLoaded", () => {
       const off =
         isPast(date) ||
         isClosed(date) ||
+        isTooLateToBookToday(date, baseDuration) ||
         !hasAnyAvailabilityForDay(date, baseDuration);
 
       if (off) cell.classList.add("day--off");
-      
+
+
       if (sameDay(date, today)) cell.classList.add("day--today");
       if (selectedDate && sameDay(date, selectedDate)) cell.classList.add("day--selected");
 
@@ -844,6 +899,7 @@ document.addEventListener("DOMContentLoaded", () => {
       grid.appendChild(cell);
     }
   }
+
 
   // =====================
   // Times
@@ -897,6 +953,13 @@ document.addEventListener("DOMContentLoaded", () => {
       opt.value = s;
       opt.textContent = s;
       timeSelect.appendChild(opt);
+
+    if (selectedDate && isToday(selectedDate)) {
+      const now = new Date();
+      const nowMin = now.getHours() * 60 + now.getMinutes();
+      slots = slots.filter((time) => parseTimeToMinutes(time) > nowMin);
+    }
+    
     });
   }
 

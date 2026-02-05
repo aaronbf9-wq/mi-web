@@ -164,6 +164,36 @@ function isPastStartTimeForToday(dateISO, startHHMM) {
 }
 
 
+function purgeExpiredLocalAppointments() {
+  const list = loadAppointments();
+  if (!list.length) return;
+
+  const now = new Date();
+  const nowISO = now.toISOString().slice(0, 10);
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const GRACE_MIN = 2; // margen
+
+  const kept = list.filter((a) => {
+    // si es de un día anterior => fuera
+    if (a.date < nowISO) return false;
+
+    // si es de un día posterior => se queda
+    if (a.date > nowISO) return true;
+
+    // si es de hoy => comprobamos si ya terminó
+    const startMin = parseTimeToMinutes(a.time);
+    const dur = a.duration ?? getServiceDuration(a.service);
+    const endMin = startMin + dur;
+
+    return endMin + GRACE_MIN > nowMin;
+  });
+
+  if (kept.length !== list.length) {
+    saveAppointments(kept);
+  }
+}
+
+
 
 // =====================
 // Local storage

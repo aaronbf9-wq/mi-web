@@ -1404,6 +1404,72 @@ END:VCALENDAR`;
     paintStars(0);
     await loadPublicReviews();
   });
+    // =====================
+    // ✅ Auto-saltar al siguiente día si hoy ya está "cerrado" por hora
+    // =====================
+
+    // Devuelve true si HOY ya no tiene huecos reservables (por hora actual)
+    function isTooLateToBookToday(minDuration = AVAILABILITY_SLOT_MIN) {
+      if (!selectedDate) return false;
+
+      const now = new Date();
+      // solo aplica si selectedDate es hoy
+      if (!sameDay(selectedDate, now)) return false;
+
+      // si hoy es domingo o cerrado, ya "demasiado tarde"
+      if (isClosed(selectedDate)) return true;
+
+      const ranges = getRangesForDate(selectedDate);
+      if (!ranges || !ranges.length) return true;
+
+      // última hora de cierre real del día (último tramo)
+      const lastRange = ranges[ranges.length - 1];
+      const closeMin = parseTimeToMinutes(lastRange.end);
+
+      // última hora a la que se puede EMPEZAR una cita
+      const lastStartAllowed = closeMin - minDuration;
+
+      const nowMin = now.getHours() * 60 + now.getMinutes();
+
+      return nowMin > lastStartAllowed;
+    }
+
+    // Busca el siguiente día abierto a partir de "fromDate"
+    function findNextOpenDay(fromDate) {
+      const d = new Date(fromDate);
+      d.setHours(0, 0, 0, 0);
+
+      // prueba hasta 60 días por seguridad
+      for (let i = 0; i < 60; i++) {
+        d.setDate(d.getDate() + 1);
+        if (!isClosed(d)) return d;
+      }
+      return null;
+    }
+
+    // Aplica el salto automático si hoy ya no deja reservar
+    function autoAdvanceIfTooLate() {
+      // duración mínima para decidir "queda hueco o no"
+      const minDur = AVAILABILITY_SLOT_MIN;
+
+      if (!selectedDate) return;
+
+      // si hoy ya es tarde, saltamos al siguiente día abierto
+      if (isTooLateToBookToday(minDur)) {
+        const next = findNextOpenDay(selectedDate);
+        if (!next) return;
+
+        selectedDate = next;
+        const iso = toISODate(selectedDate);
+        dateValue.value = iso;
+        selectedDateText.textContent = niceSpanishDate(iso);
+
+        populateTimes();
+        renderCalendar();
+        setAlert("Hoy ya no quedan horas. Te he pasado al siguiente día disponible.", "ok");
+      }
+    }
+
 
   // =====================
   // Init
@@ -1426,11 +1492,13 @@ END:VCALENDAR`;
       populateTimes();
       renderCalendar();
     }
+    autoAdvanceIfTooLate();
   })();
 
   setInterval(() => {
   purgeExpiredLocalAppointments();
   renderAppointments(); // refresca "Mis próximas citas"
+  autoAdvanceIfTooLate();
 }, 60_000);
 
 });

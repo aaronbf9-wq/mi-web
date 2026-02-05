@@ -409,6 +409,28 @@
         </div>
       </section>
 
+      <section id="adminPanel" style="display:none;">
+         <h2>Panel del peluquero</h2>
+
+           <div id="adminLoginBox">
+            <input id="adminEmail" type="email" placeholder="Email admin" />
+            <input id="adminPassword" type="password" placeholder="Contraseña" />
+            <button id="adminLoginBtn" type="button">Entrar</button>
+            <div id="adminLoginMsg"></div>
+          </div>
+
+  <div id="adminAppBox" style="display:none;">
+    <button id="adminLogoutBtn" type="button">Cerrar sesión</button>
+
+    <label>Fecha</label>
+    <input id="adminDate" type="date" />
+    <button id="adminLoadBtn" type="button">Ver citas</button>
+
+    <div id="adminList"></div>
+  </div>
+</section>
+
+
       <!-- SORPRESA -->
       <section class="section section--alt" id="sorpresa">
         <div class="container">

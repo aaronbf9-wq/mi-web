@@ -11,7 +11,7 @@
 
   <body>
 
-      <!-- ADMIN BAR (arriba del todo) -->
+<!-- ADMIN BAR (arriba del todo) -->
 <section id="adminPanel" class="admin-wrap" style="display:none;">
   <div class="admin-card">
     <div class="admin-head">
@@ -20,41 +20,44 @@
         <div class="admin-sub">Accede para ver y gestionar las citas del día.</div>
       </div>
 
-      <button id="adminClose" class="admin-ghost-btn" type="button" title="Ocultar panel">
-        ✕
-      </button>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <button id="adminLogout" class="admin-ghost-btn" type="button" title="Cerrar sesión" style="display:none;">
+          Salir
+        </button>
+        <button id="adminClose" class="admin-ghost-btn" type="button" title="Ocultar panel">✕</button>
+      </div>
     </div>
 
     <form id="adminLoginForm" class="admin-form">
       <label class="admin-field">
         <span>Email</span>
-        <input id="adminEmail" type="email" autocomplete="username" placeholder="admin@peluqueria.com" />
+        <input id="adminEmail" type="email" autocomplete="username" placeholder="admin@peluqueria.com" required />
       </label>
 
       <label class="admin-field">
         <span>Contraseña</span>
-        <input id="adminPassword" type="password" autocomplete="current-password" placeholder="••••••••" />
+        <input id="adminPassword" type="password" autocomplete="current-password" placeholder="••••••••" required />
       </label>
 
-      <button id="adminLoginBtn" class="admin-btn" type="submit">
-        Entrar
-      </button>
+      <button id="adminLoginBtn" class="admin-btn" type="submit">Entrar</button>
     </form>
-// Si el login es correcto, se muestra esta sección con las citas del día
+
+    <!-- Estado -->
     <div id="adminStatus" class="admin-status" style="display:none;"></div>
 
-    <div class="admin-box">
-  <div class="admin-row">
-    <label>Ver citas del día:</label>
-    <input id="adminDay" type="date" />
-    <button id="adminLoadDay" type="button">Cargar</button>
-  </div>
+    <!-- Citas -->
+    <div id="adminBox" class="admin-box" style="display:none;">
+      <div class="admin-row">
+        <label class="muted" style="font-size:13px;">Ver citas del día:</label>
+        <input id="adminDay" type="date" />
+        <button id="adminLoadDay" class="admin-btn" type="button" style="height:44px;">Cargar</button>
+      </div>
 
-  <div id="adminAppointments" class="admin-list"></div>
-</div>
-
+      <div id="adminAppointments" class="admin-list"></div>
+    </div>
   </div>
 </section>
+
 
 
     <header class="topbar">

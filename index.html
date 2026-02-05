@@ -10,6 +10,42 @@
   </head>
 
   <body>
+
+      <!-- ADMIN BAR (arriba del todo) -->
+<section id="adminPanel" class="admin-wrap" style="display:none;">
+  <div class="admin-card">
+    <div class="admin-head">
+      <div>
+        <div class="admin-title">Panel del peluquero</div>
+        <div class="admin-sub">Accede para ver y gestionar las citas del día.</div>
+      </div>
+
+      <button id="adminClose" class="admin-ghost-btn" type="button" title="Ocultar panel">
+        ✕
+      </button>
+    </div>
+
+    <form id="adminLoginForm" class="admin-form">
+      <label class="admin-field">
+        <span>Email</span>
+        <input id="adminEmail" type="email" autocomplete="username" placeholder="admin@peluqueria.com" />
+      </label>
+
+      <label class="admin-field">
+        <span>Contraseña</span>
+        <input id="adminPassword" type="password" autocomplete="current-password" placeholder="••••••••" />
+      </label>
+
+      <button id="adminLoginBtn" class="admin-btn" type="submit">
+        Entrar
+      </button>
+    </form>
+
+    <div id="adminStatus" class="admin-status" style="display:none;"></div>
+  </div>
+</section>
+
+
     <header class="topbar">
       <div class="container topbar__inner">
         <div class="brand">
@@ -408,28 +444,6 @@
           </div>
         </div>
       </section>
-
-      <section id="adminPanel" style="display:none;">
-         <h2>Panel del peluquero</h2>
-
-           <div id="adminLoginBox">
-            <input id="adminEmail" type="email" placeholder="Email admin" />
-            <input id="adminPassword" type="password" placeholder="Contraseña" />
-            <button id="adminLoginBtn" type="button">Entrar</button>
-            <div id="adminLoginMsg"></div>
-          </div>
-
-              <div id="adminAppBox" style="display:none;">
-                <button id="adminLogoutBtn" type="button">Cerrar sesión</button>
-
-                <label>Fecha</label>
-                <input id="adminDate" type="date" />
-                <button id="adminLoadBtn" type="button">Ver citas</button>
-
-                <div id="adminList"></div>
-           </div>
-        </section>
-
 
       <!-- SORPRESA -->
       <section class="section section--alt" id="sorpresa">

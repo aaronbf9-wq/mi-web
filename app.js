@@ -1409,6 +1409,7 @@ END:VCALENDAR`;
   // Init
   // =====================
   (async () => {
+    purgeExpiredLocalAppointments();
     await refreshRemoteBusyWide();
     renderCalendar();
     renderAppointments(); // ✅ ahora existe
@@ -1426,4 +1427,10 @@ END:VCALENDAR`;
       renderCalendar();
     }
   })();
+
+  setInterval(() => {
+  purgeExpiredLocalAppointments();
+  renderAppointments(); // refresca "Mis próximas citas"
+}, 60_000);
+
 });

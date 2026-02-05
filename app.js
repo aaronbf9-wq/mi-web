@@ -836,6 +836,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const end = start + durationMin;
       return !busy.some((b) => start < b.end && end > b.start);
     });
+    slots = slots.filter((time) => !isPastStartTimeForToday(iso, time));
 
     if (slots.length === 0) {
       const opt = document.createElement("option");

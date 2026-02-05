@@ -193,6 +193,35 @@ function purgeExpiredLocalAppointments() {
   }
 }
 
+// ¿Este día tiene AL MENOS 1 hueco reservable?
+function hasAnyAvailabilityForDay(date, durationMin) {
+  // cerrado (domingo) => no
+  if (isClosed(date)) return false;
+
+  // pasado => no
+  if (isPast(date)) return false;
+
+  // si es hoy y ya es tarde => no
+  const now = new Date();
+  if (sameDay(date, now)) {
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+
+    const ranges = getRangesForDate(date);
+    if (!ranges.length) return false;
+
+    // Si ya terminó la última franja, no hay disponibilidad
+    const lastRange = ranges[ranges.length - 1];
+    const closeMin = parseTimeToMinutes(lastRange.end);
+    const lastStartAllowed = closeMin - durationMin;
+
+    if (nowMin > lastStartAllowed) return false;
+  }
+
+  // si no hay ningún slot libre en ese día => no
+  const slots = getAvailableStartTimesForDay(date, durationMin);
+  return slots.length > 0;
+}
+
 
 
 // =====================
@@ -786,8 +815,17 @@ document.addEventListener("DOMContentLoaded", () => {
       cell.className = "day";
       cell.textContent = String(d);
 
-      const off = isPast(date) || isClosed(date);
+      const baseDuration = serviceSelect?.value
+        ? getServiceDuration(serviceSelect.value)
+        : AVAILABILITY_SLOT_MIN;
+
+      const off =
+        isPast(date) ||
+        isClosed(date) ||
+        !hasAnyAvailabilityForDay(date, baseDuration);
+
       if (off) cell.classList.add("day--off");
+      
       if (sameDay(date, today)) cell.classList.add("day--today");
       if (selectedDate && sameDay(date, selectedDate)) cell.classList.add("day--selected");
 

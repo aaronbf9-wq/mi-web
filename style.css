@@ -790,24 +790,25 @@ section[id]{ scroll-margin-top: 92px; }
   font-weight:700;
 }
 
-.admin-tabs{
-  display:flex;
-  gap:10px;
-  margin: 8px 0 12px;
-}
+.admin-tabs{ display:flex; gap:10px; align-items:center; }
+
 .admin-tab{
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 12px;
   border: 1px solid rgba(255,255,255,.14);
   background: rgba(255,255,255,.06);
   color: rgba(255,255,255,.85);
-  padding: 10px 12px;
-  border-radius: 12px;
-  cursor: pointer;
+  cursor:pointer;
   font-weight: 700;
 }
+
 .admin-tab.is-active{
-  border-color: rgba(255,90,42,.55);
-  background: rgba(255,90,42,.14);
+  border-color: rgba(255, 132, 54, .65);
+  box-shadow: 0 0 0 3px rgba(255, 132, 54, .18);
+  background: rgba(255, 90, 42, .15);
 }
+
 
 
 .admin-name{ font-weight:700; font-size:16px; }

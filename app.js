@@ -270,7 +270,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return minutesToHHMM(start + (Number(durationMin)||0));
   }
 
-  function renderAdminAppointments(rows, mode) {
+  function renderAdminAppointments(rows) {
     if (!adminAppointments) return;
 
     adminAppointments.innerHTML = "";

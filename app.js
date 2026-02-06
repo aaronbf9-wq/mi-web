@@ -1511,8 +1511,8 @@ END:VCALENDAR`;
     // ✅ Auto-saltar al siguiente día si hoy ya está "cerrado" por hora
     // =====================
 
-    // Devuelve true si HOY ya no tiene huecos reservables (por hora actual)
-    function isTooLateToBookToday(minDuration = AVAILABILITY_SLOT_MIN) {
+    // Devuelve true si la fecha seleccionada (HOY) ya no tiene huecos reservables (por hora actual)
+    function isTooLateForSelectedDate(minDuration = AVAILABILITY_SLOT_MIN) {
       if (!selectedDate) return false;
 
       const now = new Date();
@@ -1558,7 +1558,7 @@ END:VCALENDAR`;
       if (!selectedDate) return;
 
       // si hoy ya es tarde, saltamos al siguiente día abierto
-      if (isTooLateToBookToday(minDur)) {
+      if (isTooLateForSelectedDate(minDur)) {
         const next = findNextOpenDay(selectedDate);
         if (!next) return;
 

@@ -163,7 +163,6 @@ function isPastStartTimeForToday(dateISO, startHHMM) {
   return startMin <= getNowMinutes();
 }
 
-
 function purgeExpiredLocalAppointments() {
   const list = loadAppointments();
   if (!list.length) return;
@@ -194,6 +193,8 @@ function purgeExpiredLocalAppointments() {
 }
 
 // ¿Este día tiene AL MENOS 1 hueco reservable?
+// (OJO: esta función global NO se usa directamente en el calendario final;
+// la lógica real está dentro del DOMContentLoaded)
 function hasAnyAvailabilityForDay(date, durationMin) {
   // cerrado (domingo) => no
   if (isClosed(date)) return false;
@@ -221,8 +222,6 @@ function hasAnyAvailabilityForDay(date, durationMin) {
   const slots = getAvailableStartTimesForDay(date, durationMin);
   return slots.length > 0;
 }
-
-
 
 // =====================
 // Local storage
@@ -362,18 +361,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (mode === "pending") {
         div.querySelector('[data-action="done"]')?.addEventListener("click", async () => {
-          const { data, error } = await db.rpc("admin_complete_appointment", { p_id: r.id });
+          const ok = confirm("¿Marcar como terminada?");
+          if (!ok) return;
 
+          const { data, error } = await db.rpc("admin_mark_done", { p_id: r.id });
           if (error) {
             setAdminStatus("Error: " + error.message, true);
             return;
           }
           if (!data?.[0]?.ok) {
-            setAdminStatus(data?.[0]?.message || "No se pudo completar", true);
+            setAdminStatus(data?.[0]?.message || "No se pudo marcar.", true);
             return;
           }
 
-          await loadAdminDay(adminDay.value);
+          setAdminStatus("Marcada como terminada ✅");
+          await loadAdminDay();
         });
       }
 
@@ -381,192 +383,113 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  async function loadAdminDay(dateStr) {
-    if (!dateStr) {
-      setAdminStatus("Elige una fecha.", true);
+  async function loadAdminDay() {
+    if (!adminDay?.value) return;
+    setAdminStatus("Cargando...", false);
+
+    const rpcName =
+      adminViewMode === "done" ? "admin_get_done_for_day" : "admin_get_pending_for_day";
+
+    const { data, error } = await db.rpc(rpcName, { p_day: adminDay.value });
+    if (error) {
+      setAdminStatus("Error: " + error.message, true);
       return;
     }
 
-    if (adminViewMode === "pending") {
-      setAdminStatus("Cargando pendientes…");
-      adminAppointments.innerHTML = "";
-
-      const { data, error } = await db.rpc("admin_get_pending_for_day", { p_date: dateStr });
-      if (error) {
-        setAdminStatus("Error: " + error.message, true);
-        return;
-      }
-
-      const todayISO = new Date().toISOString().slice(0, 10);
-      const shouldAutoFinish = dateStr === todayISO;
-
-      if (shouldAutoFinish && (data || []).length) {
-        const now = new Date();
-        const nowMin = now.getHours() * 60 + now.getMinutes();
-        const GRACE_MIN = 3;
-
-        for (const r of data) {
-          const start = String(r.appt_time).slice(0, 5);
-          const end = computeEndTime(start, r.duration);
-          const endMin = timeToMinutes(end);
-
-          if (endMin + GRACE_MIN <= nowMin) {
-            await db.rpc("admin_complete_appointment", { p_id: r.id });
-          }
-        }
-
-        const res2 = await db.rpc("admin_get_pending_for_day", { p_date: dateStr });
-        if (res2.error) {
-          setAdminStatus("Error: " + res2.error.message, true);
-          return;
-        }
-
-        setAdminStatus(`Pendientes para ${dateStr}`);
-        renderAdminAppointments(res2.data, "pending");
-        return;
-      }
-
-      setAdminStatus(`Pendientes para ${dateStr}`);
-      renderAdminAppointments(data, "pending");
-      return;
-    }
-
-    setAdminStatus("Cargando terminadas…");
-    adminAppointments.innerHTML = "";
-
-    const doneRes = await db.rpc("admin_get_done_for_day", { p_date: dateStr });
-    if (doneRes.error) {
-      setAdminStatus("Error: " + doneRes.error.message, true);
-      return;
-    }
-
-    setAdminStatus(`Terminadas para ${dateStr}`);
-    renderAdminAppointments(doneRes.data, "done");
+    setAdminStatus("OK", false);
+    renderAdminAppointments(data || [], adminViewMode);
   }
 
-  tabPending?.addEventListener("click", async () => {
-    adminViewMode = "pending";
-    tabPending.classList.add("is-active");
-    tabDone.classList.remove("is-active");
-    await loadAdminDay(adminDay.value);
-  });
-
-  tabDone?.addEventListener("click", async () => {
-    adminViewMode = "done";
-    tabDone.classList.add("is-active");
-    tabPending.classList.remove("is-active");
-    await loadAdminDay(adminDay.value);
-  });
-
-  let adminTimer = null;
-  function startAdminTimer() {
-    if (adminTimer) clearInterval(adminTimer);
-    adminTimer = setInterval(() => {
-      if (adminDay?.value) loadAdminDay(adminDay.value);
-    }, 60_000);
-  }
-  function stopAdminTimer() {
-    if (adminTimer) clearInterval(adminTimer);
-    adminTimer = null;
-  }
-
-  async function enterAdminModeUI() {
-    if (!adminPanel) return;
-    if (!isAdminRoute()) return;
-
-    adminPanel.style.display = "block";
-
-    const today = new Date();
-    const todayStr = `${today.getFullYear()}-${pad2(today.getMonth() + 1)}-${pad2(today.getDate())}`;
-    if (adminDay) adminDay.value = todayStr;
-
-    const {
-      data: { session },
-    } = await db.auth.getSession();
-
-    if (session) {
-      const ok = await checkIsAdmin();
-      if (ok) {
-        adminLoginForm.style.display = "none";
-        adminBox.style.display = "block";
-        adminLogout.style.display = "inline-flex";
-        setAdminStatus("✅ Admin logueado");
-        await loadAdminDay(adminDay.value);
-        startAdminTimer();
-      } else {
-        await db.auth.signOut();
-      }
-    } else {
-      adminLoginForm.style.display = "grid";
-      adminBox.style.display = "none";
-      adminLogout.style.display = "none";
-    }
-  }
-
-  adminClose?.addEventListener("click", () => {
-    adminPanel.style.display = "none";
-  });
-
-  adminLogout?.addEventListener("click", async () => {
-    await db.auth.signOut();
-    setAdminStatus("Sesión cerrada.");
-    adminLoginForm.style.display = "grid";
-    adminBox.style.display = "none";
-    adminLogout.style.display = "none";
-    adminAppointments.innerHTML = "";
-    stopAdminTimer();
-  });
-
-  adminLoginForm?.addEventListener("submit", async (e) => {
+  async function handleAdminLogin(e) {
     e.preventDefault();
-    setAdminStatus("");
+    setAdminStatus("Entrando...", false);
 
     const email = adminEmail.value.trim();
     const password = adminPassword.value;
 
-    if (!email || !password) {
-      setAdminStatus("Completa email y contraseña.", true);
-      return;
-    }
-
-    const { error } = await db.auth.signInWithPassword({ email, password });
+    const { data, error } = await db.auth.signInWithPassword({ email, password });
     if (error) {
-      setAdminStatus("Login inválido: " + error.message, true);
+      setAdminStatus("Error: " + error.message, true);
       return;
     }
 
-    const ok = await checkIsAdmin();
-    if (!ok) {
-      await db.auth.signOut();
-      setAdminStatus("Tu usuario no es admin.", true);
-      return;
-    }
-
+    setAdminStatus("Sesión iniciada ✅");
     adminLoginForm.style.display = "none";
-    adminBox.style.display = "block";
     adminLogout.style.display = "inline-flex";
-    setAdminStatus("✅ Admin logueado");
-    await loadAdminDay(adminDay.value);
-    startAdminTimer();
-  });
+    adminBox.style.display = "block";
 
-  adminLoadDay?.addEventListener("click", async () => {
-    await loadAdminDay(adminDay.value);
-  });
+    // por defecto: hoy
+    const todayISO = new Date().toISOString().slice(0, 10);
+    adminDay.value = todayISO;
+    await loadAdminDay();
+  }
 
-  // Inicia panel admin si toca
-  enterAdminModeUI();
+  async function handleAdminLogout() {
+    await db.auth.signOut();
+    setAdminStatus("Sesión cerrada.", false);
+    adminLoginForm.style.display = "grid";
+    adminLogout.style.display = "none";
+    adminBox.style.display = "none";
+  }
 
-  // ========= Remote busy cache (BD) =========
-  const remoteBusyByDate = new Map(); // iso -> [{start,end}]
+  // Mostrar panel admin solo si ?admin=1
+  (async () => {
+    if (!adminPanel) return;
+
+    if (!isAdminRoute()) return;
+
+    adminPanel.style.display = "block";
+    adminClose?.addEventListener("click", () => (adminPanel.style.display = "none"));
+
+    tabPending?.addEventListener("click", async () => {
+      adminViewMode = "pending";
+      tabPending.classList.add("is-active");
+      tabDone.classList.remove("is-active");
+      await loadAdminDay();
+    });
+
+    tabDone?.addEventListener("click", async () => {
+      adminViewMode = "done";
+      tabDone.classList.add("is-active");
+      tabPending.classList.remove("is-active");
+      await loadAdminDay();
+    });
+
+    adminLoadDay?.addEventListener("click", loadAdminDay);
+    adminLoginForm?.addEventListener("submit", handleAdminLogin);
+    adminLogout?.addEventListener("click", handleAdminLogout);
+
+    const isAdmin = await checkIsAdmin();
+    if (isAdmin) {
+      adminLoginForm.style.display = "none";
+      adminLogout.style.display = "inline-flex";
+      adminBox.style.display = "block";
+      setAdminStatus("Acceso admin ✅");
+
+      const todayISO = new Date().toISOString().slice(0, 10);
+      adminDay.value = todayISO;
+      await loadAdminDay();
+    } else {
+      adminLoginForm.style.display = "grid";
+      adminLogout.style.display = "none";
+      adminBox.style.display = "none";
+      setAdminStatus("Inicia sesión para acceder.", false);
+    }
+  })();
+
+  // =====================
+  // Availability helpers
+  // =====================
+  let remoteBusyByISO = Object.create(null); // { "YYYY-MM-DD": [{start,end}, ...] }
 
   async function refreshRemoteBusyWide() {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const now = new Date();
+    const from = new Date(now);
+    from.setDate(from.getDate() - 2);
+    const to = new Date(now);
+    to.setDate(to.getDate() + 60);
 
-    const fromISO = toISODate(today);
-    const to = new Date(today);
-    to.setDate(to.getDate() + 120);
+    const fromISO = toISODate(from);
     const toISO = toISODate(to);
 
     const { data, error } = await db.rpc("get_busy_slots", { date_from: fromISO, date_to: toISO });
@@ -575,27 +498,29 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    remoteBusyByDate.clear();
-
-    (data || []).forEach((row) => {
-      const iso = row.date;
-      const start = parseTimeToMinutes(row.slot_time);
-      const end = start + Number(row.duration || 0);
-
-      if (!remoteBusyByDate.has(iso)) remoteBusyByDate.set(iso, []);
-      remoteBusyByDate.get(iso).push({ start, end });
+    const map = Object.create(null);
+    (data || []).forEach((r) => {
+      const iso = r.date;
+      const start = parseTimeToMinutes(String(r.start).slice(0, 5));
+      const end = parseTimeToMinutes(String(r.end).slice(0, 5));
+      if (!map[iso]) map[iso] = [];
+      map[iso].push({ start, end });
     });
 
-    for (const [iso, arr] of remoteBusyByDate.entries()) {
-      remoteBusyByDate.set(iso, mergeIntervals(arr));
-    }
+    Object.keys(map).forEach((iso) => {
+      map[iso] = mergeIntervals(map[iso]);
+    });
 
-    if (DEBUG) console.log("busy slots loaded:", data?.length ?? 0);
+    remoteBusyByISO = map;
+    if (DEBUG) console.log("busy slots loaded:", (data || []).length);
   }
 
   function getBusyIntervalsForISO(iso) {
-    const remote = remoteBusyByDate.get(iso) || [];
-    const local = loadAppointments().filter((a) => a.date === iso).map(apptToInterval);
+    const local = loadAppointments()
+      .filter((a) => a.date === iso)
+      .map(apptToInterval);
+
+    const remote = remoteBusyByISO[iso] || [];
     return mergeIntervals([...remote, ...local]);
   }
 
@@ -604,11 +529,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const busy = getBusyIntervalsForISO(iso);
 
     let slots = generateSlotsForDate(date, durationMin);
+
+    // filtra ocupados
     slots = slots.filter((time) => {
       const start = parseTimeToMinutes(time);
       const end = start + durationMin;
       return !busy.some((b) => start < b.end && end > b.start);
     });
+
+    // filtra horas pasadas si es hoy
+    slots = slots.filter((time) => !isPastStartTimeForToday(iso, time));
 
     return slots;
   }
@@ -739,25 +669,39 @@ document.addEventListener("DOMContentLoaded", () => {
       const priceTxt = a.price != null ? ` · ${formatEuro(a.price)}` : "";
 
       li.innerHTML = `
-        <div class="apptTop">
-          <div><strong>${niceSpanishDate(a.date)}</strong> · ${a.time}–${end}</div>
-          <div class="muted">${a.service}${priceTxt}</div>
+        <div class="apptMain">
+          <div class="apptTitle">
+            <span class="apptService">${a.service}</span>
+            <span class="apptPrice">${priceTxt}</span>
+          </div>
+          <div class="apptMeta muted">
+            ${a.date} · ${a.time}–${end} · ${dur} min
+          </div>
         </div>
-        <div class="muted" style="margin-top:6px;">
-          ${a.name} ${a.lastName} · 📞 ${a.phone} · ✉️ ${a.email}
-          ${a.notes ? `<div style="margin-top:6px;">📝 ${a.notes}</div>` : ""}
-        </div>
-        <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
-          <button class="smallBtn" type="button" data-action="ics">Descargar .ics</button>
-          <button class="smallBtn" type="button" data-action="wa">WhatsApp</button>
-          <button class="smallBtn" type="button" data-action="cancel">Anular</button>
+        <div class="apptActions">
+          <button class="smallBtn" data-action="whats">WhatsApp</button>
+          <button class="smallBtn smallBtn--ghost" data-action="ics">.ics</button>
+          <button class="smallBtn smallBtn--danger" data-action="cancel">Anular</button>
         </div>
       `;
 
-      li.querySelector('[data-action="ics"]')?.addEventListener("click", () => downloadICS(a));
-      li.querySelector('[data-action="wa"]')?.addEventListener("click", () => {
-        const link = buildWhatsAppLink(a);
+      li.querySelector('[data-action="whats"]')?.addEventListener("click", () => {
+        const text =
+          `Hola! Quiero confirmar mi cita en EL COLISEUM:\n\n` +
+          `Nombre: ${a.name} ${a.last_name}\n` +
+          `Servicio: ${a.service}\n` +
+          `Día: ${a.date}\n` +
+          `Hora: ${a.time}\n` +
+          (a.notes ? `Notas: ${a.notes}\n` : "") +
+          `\nGracias!`;
+
+        const link = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
         if (link) window.location.href = link;
+      });
+
+      li.querySelector('[data-action="ics"]')?.addEventListener("click", () => {
+        const ics = buildICS(a);
+        downloadTextFile(`cita_${a.date}_${a.time}.ics`, ics, "text/calendar");
       });
 
       li.querySelector('[data-action="cancel"]')?.addEventListener("click", async () => {
@@ -784,14 +728,30 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  async function cancelInDB(appt) {
+    // si no tiene db_id, solo local
+    if (!appt.db_id) return true;
+
+    const ok = confirm("Esto también la anulará en la base de datos. ¿Continuar?");
+    if (!ok) return false;
+
+    const { data, error } = await db.rpc("cancel_appointment", { p_id: appt.db_id });
+    if (error) {
+      setAlert("Error al anular en BD: " + error.message, "bad");
+      return false;
+    }
+    if (!data?.[0]?.ok) {
+      setAlert(data?.[0]?.message || "No se pudo anular.", "bad");
+      return false;
+    }
+    return true;
+  }
 
   function isToday(date) {
     const now = new Date();
     return sameDay(date, now);
   }
 
-  // Devuelve la última hora (en minutos) a la que se podría EMPEZAR una cita ese día,
-  // teniendo en cuenta los rangos HOURS y una duración (durationMin).
   function latestStartMinuteForDay(date, durationMin) {
     const ranges = getRangesForDate(date);
     if (!ranges.length) return null;
@@ -808,7 +768,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return latest;
   }
 
-  // Si es HOY y ya hemos pasado la última hora razonable para empezar cita, hoy queda “off”
+  // ✅ FUNCIÓN BUENA: usa el date que le pasas
   function isTooLateToBookToday(date, durationMin) {
     if (!isToday(date)) return false;
 
@@ -835,7 +795,6 @@ document.addEventListener("DOMContentLoaded", () => {
       return !busy.some((b) => start < b.end && end > b.start);
     });
   }
-
 
   // =====================
   // Calendar render
@@ -872,6 +831,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ? getServiceDuration(serviceSelect.value)
         : AVAILABILITY_SLOT_MIN;
 
+      // ✅ FIX: no bloqueamos click por falta de huecos
       const closedOrPast =
         isPast(date) ||
         isClosed(date) ||
@@ -879,17 +839,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const hasAvail = hasAnyAvailabilityForDay(date, baseDuration);
 
-      // Solo deshabilitamos click por cerrado/pasado
       if (closedOrPast) cell.classList.add("day--off");
-
-      // Si está lleno, lo marcamos pero SE PUEDE clicar
       if (!closedOrPast && !hasAvail) cell.classList.add("day--full");
 
       if (sameDay(date, today)) cell.classList.add("day--today");
       if (selectedDate && sameDay(date, selectedDate)) cell.classList.add("day--selected");
 
       cell.addEventListener("click", () => {
-        console.log("CLICK", toISODate(date), { closedOrPast, hasAvail, view });
         if (closedOrPast) return;
 
         selectedDate = date;
@@ -898,8 +854,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         populateTimes();
 
-        // Opcional: aviso si está lleno
-        if (!hasAvail) setAlert("Ese día está completo. Prueba otro día.", "bad");
+        if (!hasAvail) setAlert("Ese día no tiene huecos. Prueba otro.", "bad");
         else setAlert("");
 
         renderCalendar();
@@ -908,7 +863,6 @@ document.addEventListener("DOMContentLoaded", () => {
       grid.appendChild(cell);
     }
   }
-
 
   // =====================
   // Times
@@ -951,520 +905,329 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const first = document.createElement("option");
-    first.textContent = service ? "Selecciona una hora" : "Selecciona un servicio primero";
+    first.textContent = "Selecciona una hora";
     first.value = "";
-    first.disabled = true;
     first.selected = true;
     timeSelect.appendChild(first);
 
-    slots.forEach((s) => {
+    slots.forEach((t) => {
       const opt = document.createElement("option");
-      opt.value = s;
-      opt.textContent = s;
+      opt.value = t;
+      opt.textContent = t;
       timeSelect.appendChild(opt);
     });
   }
 
-  serviceSelect?.addEventListener("change", () => {
-    if (selectedDate) populateTimes();
-  });
+  // =====================
+  // Free slots (grid)
+  // =====================
+  function renderFreeSlots() {
+    if (!freeSlotsGrid) return;
+
+    freeSlotsGrid.innerHTML = "";
+    if (!selectedDate) return;
+
+    const service = serviceSelect.value;
+    const durationMin = getServiceDuration(service);
+
+    const freeRanges = getFreeRangesForDay(selectedDate);
+    if (!freeRanges.length) {
+      freeSlotsGrid.innerHTML = `<div class="muted">Sin huecos disponibles.</div>`;
+      return;
+    }
+
+    freeRanges.forEach((r) => {
+      const div = document.createElement("div");
+      div.className = "freeSlot";
+      div.textContent = `${minutesToTime(r.start)}–${minutesToTime(r.end)}`;
+      freeSlotsGrid.appendChild(div);
+    });
+  }
 
   // =====================
-  // Appointments UI (ICS/WA helpers)
+  // WhatsApp + ICS
   // =====================
-  function toICSDateTime(dateISO, timeHHMM) {
-    const [y, m, d] = dateISO.split("-").map(Number);
-    const [hh, mm] = timeHHMM.split(":").map(Number);
-    const dt = new Date(y, m - 1, d, hh, mm, 0);
+  function buildWhatsText(appt) {
+    const whenNice = `${niceSpanishDate(appt.date)} a las ${appt.time}`;
+    return (
+      `Hola! Quiero confirmar mi cita en EL COLISEUM ⚔️\n\n` +
+      `Nombre: ${appt.name} ${appt.last_name}\n` +
+      `Teléfono: ${appt.phone}\n` +
+      (appt.email ? `Email: ${appt.email}\n` : "") +
+      `Servicio: ${appt.service}\n` +
+      `Día: ${whenNice}\n` +
+      `Hora: ${appt.time}\n` +
+      (appt.notes ? `Notas: ${appt.notes}\n` : "") +
+      `\n¡Gracias!`
+    );
+  }
 
-    return `${dt.getFullYear()}${pad2(dt.getMonth() + 1)}${pad2(dt.getDate())}T${pad2(
-      dt.getHours()
-    )}${pad2(dt.getMinutes())}00`;
+  function buildICS(appt) {
+    const [y, mo, d] = appt.date.split("-").map(Number);
+    const [hh, mm] = appt.time.split(":").map(Number);
+
+    const start = new Date(y, mo - 1, d, hh, mm, 0);
+    const dur = appt.duration ?? getServiceDuration(appt.service);
+    const end = new Date(start.getTime() + dur * 60000);
+
+    const dt = (x) =>
+      `${x.getFullYear()}${pad2(x.getMonth() + 1)}${pad2(x.getDate())}T${pad2(
+        x.getHours()
+      )}${pad2(x.getMinutes())}00`;
+
+    const title = `Cita: ${appt.service}`;
+    const desc =
+      `Servicio: ${appt.service}\\n` +
+      `Cliente: ${appt.name} ${appt.last_name}\\n` +
+      `Tel: ${appt.phone}\\n` +
+      (appt.notes ? `Notas: ${appt.notes}\\n` : "");
+
+    return [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//EL COLISEUM//Citas//ES",
+      "CALSCALE:GREGORIAN",
+      "BEGIN:VEVENT",
+      `UID:${Date.now()}@coliseum`,
+      `DTSTAMP:${dt(new Date())}`,
+      `DTSTART:${dt(start)}`,
+      `DTEND:${dt(end)}`,
+      `SUMMARY:${title}`,
+      `DESCRIPTION:${desc}`,
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ].join("\r\n");
   }
 
   function downloadTextFile(filename, content, mime) {
-    const blob = new Blob([content], { type: mime });
+    const blob = new Blob([content], { type: mime || "text/plain" });
     const url = URL.createObjectURL(blob);
-
     const a = document.createElement("a");
     a.href = url;
     a.download = filename;
     document.body.appendChild(a);
     a.click();
-    a.remove();
-
-    URL.revokeObjectURL(url);
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+      a.remove();
+    }, 0);
   }
 
-  function downloadICS(appt) {
-    const dtStart = toICSDateTime(appt.date, appt.time);
-    const durationMin = appt.duration ?? getServiceDuration(appt.service);
-
-    const [y, mo, d] = appt.date.split("-").map(Number);
-    const [hh, mm] = appt.time.split(":").map(Number);
-    const end = new Date(y, mo - 1, d, hh, mm, 0);
-    end.setMinutes(end.getMinutes() + durationMin);
-
-    const dtEnd = `${end.getFullYear()}${pad2(end.getMonth() + 1)}${pad2(end.getDate())}T${pad2(
-      end.getHours()
-    )}${pad2(end.getMinutes())}00`;
-
-    const uid = `${appt.id}@elcoliseum`;
-
-    const now = new Date();
-    const stamp = `${now.getFullYear()}${pad2(now.getMonth() + 1)}${pad2(now.getDate())}T${pad2(
-      now.getHours()
-    )}${pad2(now.getMinutes())}${pad2(now.getSeconds())}`;
-
-    const priceTxt = appt.price != null ? ` (${formatEuro(appt.price)})` : "";
-    const summary = `Cita - EL COLISEUM (${appt.service}${priceTxt})`;
-
-    const description =
-      `Cliente: ${appt.name} ${appt.lastName}\\n` +
-      `Teléfono: ${appt.phone}\\n` +
-      `Email: ${appt.email}\\n` +
-      `Servicio: ${appt.service}${priceTxt}\\n` +
-      `Duración: ${durationMin} min\\n` +
-      (appt.notes ? `Nota: ${appt.notes}\\n` : "");
-
-    const ics = `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//EL COLISEUM//Citas//ES
-CALSCALE:GREGORIAN
-METHOD:PUBLISH
-BEGIN:VEVENT
-UID:${uid}
-DTSTAMP:${stamp}
-DTSTART:${dtStart}
-DTEND:${dtEnd}
-SUMMARY:${summary}
-DESCRIPTION:${description}
-END:VEVENT
-END:VCALENDAR`;
-
-    downloadTextFile(`cita-elcoliseum-${appt.date}-${appt.time}.ics`, ics, "text/calendar");
+  function genLocalId() {
+    return (crypto?.randomUUID?.() || String(Date.now())) + "_" + Math.random().toString(16).slice(2);
   }
 
-  function buildWhatsAppLink(appt) {
-    const number = (WHATSAPP_NUMBER || "").replace(/\D/g, "");
-    if (!number) return null;
-
-    const priceTxt = appt.price != null ? ` (${formatEuro(appt.price)})` : "";
-
-    const text =
-      `Hola! Quiero reservar en EL COLISEUM.%0A` +
-      `Nombre: ${encodeURIComponent(appt.name + " " + appt.lastName)}%0A` +
-      `Teléfono: ${encodeURIComponent(appt.phone)}%0A` +
-      `Email: ${encodeURIComponent(appt.email)}%0A` +
-      `Servicio: ${encodeURIComponent(appt.service + priceTxt)}%0A` +
-      `Día: ${encodeURIComponent(niceSpanishDate(appt.date))}%0A` +
-      `Hora: ${encodeURIComponent(appt.time)}%0A` +
-      (appt.notes ? `Nota: ${encodeURIComponent(appt.notes)}%0A` : "") +
-      `Gracias!`;
-
-    return `https://wa.me/${number}?text=${text}`;
-  }
-
-  function enablePostCreateActions(appt) {
-    lastCreatedAppointment = appt;
-    const wa = buildWhatsAppLink(appt);
-    if (whatsBtn) whatsBtn.disabled = !wa;
-    if (downloadIcsBtn) downloadIcsBtn.disabled = false;
-  }
-
-  async function cancelInDB(appt) {
-    if (!appt.db_id) return true; // solo local
-
-    const { data, error } = await db.rpc("cancel_appointment", {
-      p_id: appt.db_id,
+  // =====================
+  // Submit booking
+  // =====================
+  async function createInDB(appt) {
+    const { data, error } = await db.rpc("create_appointment", {
+      p_day: appt.date,
+      p_time: appt.time,
+      p_name: appt.name,
+      p_last_name: appt.last_name,
       p_phone: appt.phone,
       p_email: appt.email,
+      p_service: appt.service,
+      p_duration: appt.duration,
+      p_notes: appt.notes,
     });
 
     if (error) {
-      setAlert("Error al anular en BD: " + error.message, "bad");
-      return false;
+      setAlert("Error guardando en BD: " + error.message, "bad");
+      return null;
     }
     if (!data?.[0]?.ok) {
-      setAlert(data?.[0]?.message || "No se pudo anular en BD.", "bad");
-      return false;
+      setAlert(data?.[0]?.message || "No se pudo guardar.", "bad");
+      return null;
     }
-    return true;
+    return data?.[0]?.id || null;
   }
 
-  // =====================
-  // Disponibilidad rápida
-  // =====================
-  function renderFreeSlots() {
-    if (!freeSlotsGrid) return;
-    freeSlotsGrid.innerHTML = "";
+  form?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    setAlert("", "");
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const name = nameInput.value.trim();
+    const last_name = lastNameInput.value.trim();
+    const phone = phoneInput.value.trim();
+    const email = emailInput.value.trim();
+    const service = serviceSelect.value;
+    const notes = notesInput.value.trim();
 
-    for (let i = 0; i < FREE_DAYS_AHEAD; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
-
-      if (isClosed(d)) continue;
-
-      const iso = toISODate(d);
-
-      const totalSlots = generateSlotsForDate(d, AVAILABILITY_SLOT_MIN).length;
-      const availableSlots = getAvailableStartTimesForDay(d, AVAILABILITY_SLOT_MIN);
-      const remaining = availableSlots.length;
-
-      if (SHOW_SCARCITY_ONLY && remaining > SCARCITY_WARNING) continue;
-
-      const severity =
-        remaining <= SCARCITY_CRITICAL
-          ? "critical"
-          : remaining <= SCARCITY_WARNING
-          ? "warning"
-          : "ok";
-
-      const freeRanges = getFreeRangesForDay(d);
-      const pct = totalSlots > 0 ? Math.round((remaining / totalSlots) * 100) : 0;
-
-      const card = document.createElement("div");
-      card.className = `dayCard dayCard--${severity}`;
-
-      const top = document.createElement("div");
-      top.className = "dayCard__top";
-      top.innerHTML = `
-        <div>
-          <div class="dayTitle">${niceSpanishDate(iso)}</div>
-          <div class="daySub">Quedan <strong>${remaining}</strong> huecos (${pct}%)</div>
-          <div class="statusBadge statusBadge--${severity}">
-            ${
-              severity === "critical"
-                ? "🔥 Poca disponibilidad"
-                : severity === "warning"
-                ? "⚠️ Se está llenando"
-                : "✅ Bastante disponible"
-            }
-          </div>
-        </div>
-        <button class="smallBtn" type="button">Elegir</button>
-      `;
-
-      top.querySelector("button")?.addEventListener("click", () => {
-        selectedDate = d;
-        dateValue.value = iso;
-        selectedDateText.textContent = niceSpanishDate(iso);
-        populateTimes();
-        renderCalendar();
-        document.getElementById("reservar")?.scrollIntoView({ behavior: "smooth" });
-      });
-
-      const bar = document.createElement("div");
-      bar.className = "progress";
-      bar.innerHTML = `<span style="width:${Math.min(100, pct)}%"></span>`;
-
-      const chips = document.createElement("div");
-      chips.className = "chips";
-
-      if (SHOW_FREE_AS_RANGES) {
-        if (!freeRanges.length) {
-          chips.innerHTML = `<span class="chip">Sin huecos</span>`;
-        } else {
-          freeRanges.forEach((r) => {
-            const span = document.createElement("span");
-            span.className = "chip";
-            span.textContent = `${minutesToTime(r.start)}–${minutesToTime(r.end)}`;
-            chips.appendChild(span);
-          });
-        }
-      } else {
-        availableSlots.slice(0, 12).forEach((t) => {
-          const span = document.createElement("span");
-          span.className = "chip";
-          span.textContent = t;
-          chips.appendChild(span);
-        });
-      }
-
-      card.appendChild(top);
-      card.appendChild(bar);
-      card.appendChild(chips);
-      freeSlotsGrid.appendChild(card);
+    if (!selectedDate) {
+      setAlert("Selecciona un día.", "bad");
+      return;
+    }
+    if (!service) {
+      setAlert("Selecciona un servicio.", "bad");
+      return;
+    }
+    const time = timeSelect.value;
+    if (!time) {
+      setAlert("Selecciona una hora.", "bad");
+      return;
+    }
+    if (!name || !last_name || !phone) {
+      setAlert("Completa nombre, apellidos y teléfono.", "bad");
+      return;
     }
 
-    if (!freeSlotsGrid.children.length) {
-      freeSlotsGrid.innerHTML = `
-        <div class="dayCard">
-          <div class="dayTitle">Sin alertas de disponibilidad</div>
-          <div class="daySub">No hay días “justos” en los próximos ${FREE_DAYS_AHEAD} días.</div>
-        </div>
-      `;
-    }
-  }
+    const duration = getServiceDuration(service);
+    const price = getServicePrice(service);
 
-  // =====================
-  // Events
-  // =====================
-  prevMonthBtn?.addEventListener("click", () => {
-    view = new Date(view.getFullYear(), view.getMonth() - 1, 1);
-    renderCalendar();
-  });
+    const appt = {
+      id: genLocalId(),
+      db_id: null,
+      date: toISODate(selectedDate),
+      time,
+      name,
+      last_name,
+      phone,
+      email,
+      service,
+      duration,
+      price,
+      notes,
+    };
 
-  nextMonthBtn?.addEventListener("click", () => {
-    view = new Date(view.getFullYear(), view.getMonth() + 1, 1);
+    // guarda en BD
+    const dbId = await createInDB(appt);
+    if (!dbId) return;
+    appt.db_id = dbId;
+
+    // guarda en local
+    const list = loadAppointments();
+    list.push(appt);
+    saveAppointments(list);
+    lastCreatedAppointment = appt;
+
+    await refreshRemoteBusyWide();
+    renderAppointments();
+    renderFreeSlots();
+    populateTimes();
     renderCalendar();
+
+    setAlert("Cita creada ✅ Ahora puedes enviar por WhatsApp o descargar .ics.", "ok");
   });
 
   whatsBtn?.addEventListener("click", () => {
-    if (!lastCreatedAppointment) return;
-    const wa = buildWhatsAppLink(lastCreatedAppointment);
-
-    if (!wa) {
-      setAlert("Falta configurar WHATSAPP_NUMBER en app.js.", "bad");
+    if (!lastCreatedAppointment) {
+      setAlert("Primero confirma una cita.", "bad");
       return;
     }
-    window.location.href = wa;
+    const text = buildWhatsText(lastCreatedAppointment);
+    const link = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
+    window.location.href = link;
   });
 
   downloadIcsBtn?.addEventListener("click", () => {
-    if (!lastCreatedAppointment) return;
-    downloadICS(lastCreatedAppointment);
-  });
-
-  // =====================
-  // Guardar cita (BD + local)
-  // =====================
-  form?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    try {
-      const name = nameInput.value.trim();
-      const lastName = lastNameInput.value.trim();
-      const phone = phoneInput.value.trim();
-      const email = emailInput.value.trim();
-      const service = serviceSelect.value;
-      const notes = notesInput.value.trim();
-      const date = dateValue.value;
-      const time = timeSelect.value;
-
-      if (!name || !lastName || !phone || !email || !service || !date || !time) {
-        setAlert("Completa nombre, apellidos, teléfono, email, servicio, día y hora.", "bad");
-        return;
-      }
-
-      const duration = getServiceDuration(service);
-      const price = getServicePrice(service);
-
-      const busy = getBusyIntervalsForISO(date);
-      const start = parseTimeToMinutes(time);
-      const end = start + duration;
-      if (busy.some((b) => start < b.end && end > b.start)) {
-        setAlert("Ese horario ya está ocupado. Elige otra hora.", "bad");
-        return;
-      }
-
-      // ✅ NUEVO: bloquear reserva si la hora ya pasó (por si alguien manipula el HTML)
-      if (isPastStartTimeForToday(date, time)) {
-        setAlert("No puedes reservar una hora que ya ha pasado.", "bad");
-        return;
-      } 
-
-
-      const { data, error } = await db.rpc("book_appointment", {
-        p_name: name,
-        p_last_name: lastName,
-        p_email: email,
-        p_phone: phone,
-        p_date: date,
-        p_time: time,
-        p_service: service,
-        p_duration: duration,
-        p_notes: notes || null,
-      });
-
-      if (error) {
-        setAlert("Error al guardar en BD: " + error.message, "bad");
-        return;
-      }
-      if (!data?.[0]?.ok) {
-        setAlert(data?.[0]?.message || "No se pudo guardar la cita.", "bad");
-        return;
-      }
-
-      const dbId = data?.[0]?.id || null;
-
-      const appt = {
-        id: crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()),
-        db_id: dbId,
-        name,
-        lastName,
-        phone,
-        email,
-        service,
-        notes,
-        date,
-        time,
-        duration,
-        price,
-        createdAt: new Date().toISOString(),
-      };
-
-      const list = loadAppointments();
-      list.push(appt);
-      saveAppointments(list);
-
-      await refreshRemoteBusyWide();
-      renderAppointments();
-      renderFreeSlots();
-      enablePostCreateActions(appt);
-
-      setAlert("Cita guardada ✅ (también en la base de datos).", "ok");
-      populateTimes();
-
-      // opcional: bajar a la lista
-      document.getElementById("apptList")?.scrollIntoView({ behavior: "smooth" });
-    } catch (err) {
-      console.error(err);
-      setAlert("Se produjo un error en el script. Mira la consola.", "bad");
+    if (!lastCreatedAppointment) {
+      setAlert("Primero confirma una cita.", "bad");
+      return;
     }
+    const ics = buildICS(lastCreatedAppointment);
+    downloadTextFile(
+      `cita_${lastCreatedAppointment.date}_${lastCreatedAppointment.time}.ics`,
+      ics,
+      "text/calendar"
+    );
   });
 
-  document.querySelectorAll(".serviceBtn").forEach((b) => {
-    b.addEventListener("click", () => {
-      const service = b.getAttribute("data-service");
-      if (!service) return;
+  serviceSelect?.addEventListener("change", () => {
+    populateTimes();
+    renderCalendar();
+    renderFreeSlots();
+  });
 
-      serviceSelect.value = service;
-      if (selectedDate) populateTimes();
+  prevMonthBtn?.addEventListener("click", async () => {
+    view = new Date(view.getFullYear(), view.getMonth() - 1, 1);
+    await refreshRemoteBusyWide();
+    renderCalendar();
+  });
 
-      document.getElementById("reservar")?.scrollIntoView({ behavior: "smooth" });
-      setAlert(`Servicio seleccionado: ${service}. Ahora elige día y hora.`, "ok");
-    });
+  nextMonthBtn?.addEventListener("click", async () => {
+    view = new Date(view.getFullYear(), view.getMonth() + 1, 1);
+    await refreshRemoteBusyWide();
+    renderCalendar();
   });
 
   // =====================
-  // RESEÑAS (RPC)
+  // Reviews (tu lógica original)
   // =====================
   const reviewForm = document.getElementById("reviewForm");
-  const reviewAlert = document.getElementById("reviewAlert");
-  const reviewsList = document.getElementById("reviewsList");
-
   const reviewName = document.getElementById("reviewName");
   const reviewLastName = document.getElementById("reviewLastName");
   const reviewPhone = document.getElementById("reviewPhone");
   const reviewEmail = document.getElementById("reviewEmail");
   const reviewComment = document.getElementById("reviewComment");
-  const starRating = document.getElementById("starRating");
-
+  const reviewAlert = document.getElementById("reviewAlert");
+  const starsWrap = document.getElementById("starPicker");
   let currentRating = 0;
 
-  function setReviewAlert(text, type) {
+  function setReviewAlert(msg, type) {
     if (!reviewAlert) return;
-    reviewAlert.textContent = text || "";
+    reviewAlert.textContent = msg || "";
     reviewAlert.classList.remove("alert--ok", "alert--bad");
     if (type === "ok") reviewAlert.classList.add("alert--ok");
     if (type === "bad") reviewAlert.classList.add("alert--bad");
   }
 
-  function paintStars(n) {
-    currentRating = n;
-    starRating?.querySelectorAll(".star").forEach((btn) => {
-      const v = Number(btn.dataset.value || 0);
-      btn.classList.toggle("is-on", v <= n);
+  function paintStars(r) {
+    if (!starsWrap) return;
+    const stars = Array.from(starsWrap.querySelectorAll("button[data-star]"));
+    stars.forEach((btn) => {
+      const s = Number(btn.dataset.star);
+      btn.classList.toggle("is-on", s <= r);
     });
   }
 
-  starRating?.querySelectorAll(".star").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      paintStars(Number(btn.dataset.value || 0));
-    });
+  starsWrap?.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-star]");
+    if (!btn) return;
+    currentRating = Number(btn.dataset.star);
+    paintStars(currentRating);
   });
 
-  function starsText(n) {
-    return "★★★★★".slice(0, n) + "☆☆☆☆☆".slice(0, 5 - n);
-  }
-
-  async function loadPublicReviews() {
-    if (!reviewsList) return;
-
-    const { data, error } = await db.rpc("get_public_reviews", { p_limit: 6 });
-    if (error) {
-      if (DEBUG) console.warn("get_public_reviews error:", error);
-      return;
-    }
-
-    reviewsList.innerHTML = "";
-
-    (data || []).forEach((r) => {
-      const div = document.createElement("div");
-      div.className = "reviewItem";
-      const dt = new Date(r.created_at);
-
-      div.innerHTML = `
-        <div class="reviewTop">
-          <div class="reviewName">${r.name}</div>
-          <div class="reviewDate">${dt.toLocaleDateString("es-ES")}</div>
-        </div>
-        <div class="reviewStars">${starsText(r.rating)}</div>
-        <div class="reviewText">${r.comment}</div>
-
-        <div class="reviewActions" style="margin-top:10px;">
-          <button class="smallBtn" data-action="deleteReview" data-id="${r.id}">
-            Borrar
-          </button>
-          <div class="muted" style="font-size:12px; margin-top:6px;">
-            (Se borrará si el email y teléfono del formulario coinciden con los usados al reseñar)
-          </div>
-        </div>
-      `;
-
-      div.querySelector('[data-action="deleteReview"]')?.addEventListener("click", async () => {
-        const reviewId = div.querySelector('[data-action="deleteReview"]').dataset.id;
-
-        const em = (reviewEmail?.value || "").trim();
-        const ph = (reviewPhone?.value || "").trim();
-
-        if (!em || !ph) {
-          setReviewAlert("Para borrar una reseña, escribe tu email y teléfono en el formulario.", "bad");
-          return;
-        }
-
-        const { data, error } = await db.rpc("delete_review", {
-          p_review_id: reviewId,
-          p_email: em,
-          p_phone: ph,
-        });
-
-        if (error) {
-          setReviewAlert("Error al borrar: " + error.message, "bad");
-          return;
-        }
-        if (!data?.[0]?.ok) {
-          setReviewAlert(data?.[0]?.message || "No se pudo borrar.", "bad");
-          return;
-        }
-
-        setReviewAlert("Reseña borrada ✅", "ok");
-        await loadPublicReviews();
-      });
-
-      reviewsList.appendChild(div);
-    });
-
-    if (!reviewsList.children.length) {
-      reviewsList.innerHTML = `<div class="reviewItem">Aún no hay reseñas.</div>`;
-    }
-  }
-
   function syncReviewFromBooking() {
-    reviewName.value = nameInput.value || reviewName.value;
-    reviewLastName.value = lastNameInput.value || reviewLastName.value;
-    reviewPhone.value = phoneInput.value || reviewPhone.value;
-    reviewEmail.value = emailInput.value || reviewEmail.value;
+    if (!reviewName || !reviewLastName || !reviewPhone || !reviewEmail) return;
+    reviewName.value = nameInput?.value || "";
+    reviewLastName.value = lastNameInput?.value || "";
+    reviewPhone.value = phoneInput?.value || "";
+    reviewEmail.value = emailInput?.value || "";
   }
 
   [nameInput, lastNameInput, phoneInput, emailInput].forEach((el) => {
     el?.addEventListener("input", syncReviewFromBooking);
   });
   syncReviewFromBooking();
+
+  async function loadPublicReviews() {
+    const list = document.getElementById("reviewsList");
+    if (!list) return;
+
+    const { data, error } = await db.rpc("get_public_reviews");
+    if (error) {
+      if (DEBUG) console.warn("get_public_reviews error:", error);
+      return;
+    }
+
+    list.innerHTML = "";
+    (data || []).forEach((r) => {
+      const div = document.createElement("div");
+      div.className = "reviewCard";
+      const stars = "★".repeat(r.rating || 0) + "☆".repeat(5 - (r.rating || 0));
+      div.innerHTML = `
+        <div class="reviewHead">
+          <div class="reviewWho">${(r.name || "").trim()} ${(r.last_name || "").trim()}</div>
+          <div class="reviewStars">${stars}</div>
+        </div>
+        <div class="reviewBody">${r.comment || ""}</div>
+        <div class="reviewFoot muted">${new Date(r.created_at).toLocaleDateString("es-ES")}</div>
+      `;
+      list.appendChild(div);
+    });
+  }
 
   reviewForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -1507,72 +1270,61 @@ END:VCALENDAR`;
     paintStars(0);
     await loadPublicReviews();
   });
-    // =====================
-    // ✅ Auto-saltar al siguiente día si hoy ya está "cerrado" por hora
-    // =====================
 
-    // Devuelve true si la fecha seleccionada (HOY) ya no tiene huecos reservables (por hora actual)
-    function isTooLateForSelectedDate(minDuration = AVAILABILITY_SLOT_MIN) {
-      if (!selectedDate) return false;
+  // =====================
+  // ✅ Auto-saltar al siguiente día si hoy ya está "cerrado" por hora
+  // FIX: renombrado para que NO pise a isTooLateToBookToday(date,duration)
+  // =====================
 
-      const now = new Date();
-      // solo aplica si selectedDate es hoy
-      if (!sameDay(selectedDate, now)) return false;
+  function isTooLateToAutoBookToday(minDuration = AVAILABILITY_SLOT_MIN) {
+    if (!selectedDate) return false;
 
-      // si hoy es domingo o cerrado, ya "demasiado tarde"
-      if (isClosed(selectedDate)) return true;
+    const now = new Date();
+    if (!sameDay(selectedDate, now)) return false;
 
-      const ranges = getRangesForDate(selectedDate);
-      if (!ranges || !ranges.length) return true;
+    if (isClosed(selectedDate)) return true;
 
-      // última hora de cierre real del día (último tramo)
-      const lastRange = ranges[ranges.length - 1];
-      const closeMin = parseTimeToMinutes(lastRange.end);
+    const ranges = getRangesForDate(selectedDate);
+    if (!ranges || !ranges.length) return true;
 
-      // última hora a la que se puede EMPEZAR una cita
-      const lastStartAllowed = closeMin - minDuration;
+    const lastRange = ranges[ranges.length - 1];
+    const closeMin = parseTimeToMinutes(lastRange.end);
 
-      const nowMin = now.getHours() * 60 + now.getMinutes();
+    const lastStartAllowed = closeMin - minDuration;
 
-      return nowMin > lastStartAllowed;
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    return nowMin > lastStartAllowed;
+  }
+
+  function findNextOpenDay(fromDate) {
+    const d = new Date(fromDate);
+    d.setHours(0, 0, 0, 0);
+
+    for (let i = 0; i < 60; i++) {
+      d.setDate(d.getDate() + 1);
+      if (!isClosed(d)) return d;
     }
+    return null;
+  }
 
-    // Busca el siguiente día abierto a partir de "fromDate"
-    function findNextOpenDay(fromDate) {
-      const d = new Date(fromDate);
-      d.setHours(0, 0, 0, 0);
+  function autoAdvanceIfTooLate() {
+    const minDur = AVAILABILITY_SLOT_MIN;
+    if (!selectedDate) return;
 
-      // prueba hasta 60 días por seguridad
-      for (let i = 0; i < 60; i++) {
-        d.setDate(d.getDate() + 1);
-        if (!isClosed(d)) return d;
-      }
-      return null;
+    if (isTooLateToAutoBookToday(minDur)) {
+      const next = findNextOpenDay(selectedDate);
+      if (!next) return;
+
+      selectedDate = next;
+      const iso = toISODate(selectedDate);
+      dateValue.value = iso;
+      selectedDateText.textContent = niceSpanishDate(iso);
+
+      populateTimes();
+      renderCalendar();
+      renderFreeSlots();
     }
-
-    // Aplica el salto automático si hoy ya no deja reservar
-    function autoAdvanceIfTooLate() {
-      // duración mínima para decidir "queda hueco o no"
-      const minDur = AVAILABILITY_SLOT_MIN;
-
-      if (!selectedDate) return;
-
-      // si hoy ya es tarde, saltamos al siguiente día abierto
-      if (isTooLateForSelectedDate(minDur)) {
-        const next = findNextOpenDay(selectedDate);
-        if (!next) return;
-
-        selectedDate = next;
-        const iso = toISODate(selectedDate);
-        dateValue.value = iso;
-        selectedDateText.textContent = niceSpanishDate(iso);
-
-        populateTimes();
-        renderCalendar();
-        setAlert("Hoy ya no quedan horas. Te he pasado al siguiente día disponible.", "ok");
-      }
-    }
-
+  }
 
   // =====================
   // Init
@@ -1580,28 +1332,24 @@ END:VCALENDAR`;
   (async () => {
     purgeExpiredLocalAppointments();
     await refreshRemoteBusyWide();
-    renderCalendar();
-    renderAppointments(); // ✅ ahora existe
-    renderFreeSlots();
-    populateTimes();
-    await loadPublicReviews();
 
-    // autoseleccionar hoy (si está abierto)
-    const t = new Date();
-    if (!isPast(t) && !isClosed(t)) {
-      selectedDate = t;
-      dateValue.value = toISODate(t);
-      selectedDateText.textContent = niceSpanishDate(dateValue.value);
-      populateTimes();
-      renderCalendar();
+    // default: hoy si no está pasado y no es domingo
+    const today = new Date();
+    if (!isPast(today) && !isClosed(today)) {
+      selectedDate = today;
+    } else {
+      selectedDate = findNextOpenDay(today) || today;
     }
+
+    const iso = toISODate(selectedDate);
+    dateValue.value = iso;
+    selectedDateText.textContent = niceSpanishDate(iso);
+
+    populateTimes();
+    renderCalendar();
+    renderAppointments();
+    renderFreeSlots();
+    await loadPublicReviews();
     autoAdvanceIfTooLate();
   })();
-
-  setInterval(() => {
-  purgeExpiredLocalAppointments();
-  renderAppointments(); // refresca "Mis próximas citas"
-  autoAdvanceIfTooLate();
-}, 60_000);
-
 });

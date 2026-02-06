@@ -962,13 +962,6 @@ document.addEventListener("DOMContentLoaded", () => {
       opt.value = s;
       opt.textContent = s;
       timeSelect.appendChild(opt);
-
-    if (selectedDate && isToday(selectedDate)) {
-      const now = new Date();
-      const nowMin = now.getHours() * 60 + now.getMinutes();
-      slots = slots.filter((time) => parseTimeToMinutes(time) > nowMin);
-    }
-    
     });
   }
 

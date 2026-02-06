@@ -872,27 +872,35 @@ document.addEventListener("DOMContentLoaded", () => {
         ? getServiceDuration(serviceSelect.value)
         : AVAILABILITY_SLOT_MIN;
 
-      const off =
+      const closedOrPast =
         isPast(date) ||
         isClosed(date) ||
-        isTooLateToBookToday(date, baseDuration) ||
-        !hasAnyAvailabilityForDay(date, baseDuration);
+        isTooLateToBookToday(date, baseDuration);
 
-      if (off) cell.classList.add("day--off");
+      const hasAvail = hasAnyAvailabilityForDay(date, baseDuration);
 
+      // Solo deshabilitamos click por cerrado/pasado
+      if (closedOrPast) cell.classList.add("day--off");
+
+      // Si está lleno, lo marcamos pero SE PUEDE clicar
+      if (!closedOrPast && !hasAvail) cell.classList.add("day--full");
 
       if (sameDay(date, today)) cell.classList.add("day--today");
       if (selectedDate && sameDay(date, selectedDate)) cell.classList.add("day--selected");
 
       cell.addEventListener("click", () => {
-        if (off) return;
+        if (closedOrPast) return;
 
         selectedDate = date;
         dateValue.value = toISODate(date);
         selectedDateText.textContent = niceSpanishDate(dateValue.value);
 
         populateTimes();
-        setAlert("");
+
+        // Opcional: aviso si está lleno
+        if (!hasAvail) setAlert("Ese día está completo. Prueba otro día.", "bad");
+        else setAlert("");
+
         renderCalendar();
       });
 

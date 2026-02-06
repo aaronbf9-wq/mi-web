@@ -299,6 +299,14 @@ section[id]{ scroll-margin-top: 92px; }
 }
 .day:hover{ background: rgba(255,255,255,.09); }
 .day--off{ opacity:.35; cursor:not-allowed; }
+.day--full{
+  opacity: .65;
+  border-style: dashed;
+}
+.day--full:hover{
+  opacity: .85;
+}
+
 .day--today{ outline: 2px solid rgba(255,90,42,.35); }
 .day--selected{
   background: linear-gradient(180deg, rgba(255,90,42,.9), rgba(255,90,42,.65));

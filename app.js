@@ -889,6 +889,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (selectedDate && sameDay(date, selectedDate)) cell.classList.add("day--selected");
 
       cell.addEventListener("click", () => {
+        console.log("CLICK", toISODate(date), { closedOrPast, hasAvail, view });
         if (closedOrPast) return;
 
         selectedDate = date;

@@ -1021,6 +1021,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Submit booking
   // =====================
   async function createInDB(appt) {
+    const selectedTime = timeSelect.value;
     supabase.rpc("book_appointment", {
       p_name: name,
       p_last_name: lastName,

@@ -1020,33 +1020,54 @@ document.addEventListener("DOMContentLoaded", () => {
   // =====================
   // Submit booking
   // =====================
-  async function createInDB(appt) {
-    const selectedTime = timeSelect.value;
+  async function createInDB() {
+    // 1) Leer inputs (esto te falta)
+    const name = nameInput.value.trim();
+    const lastName = lastNameInput.value.trim();
+    const phone = phoneInput.value.trim();
+    const email = emailInput.value.trim();
+    const notes = notesInput.value.trim();
+
+    // 2) Día/hora/servicio
+    const date = dateValue.value;        // ✅ "YYYY-MM-DD"
+    const time = timeSelect.value;       // ✅ "HH:MM"
     const service = serviceSelect.value;
-    const duration = getServiceDuration(service);   // o SERVICE_META[service].duration
-    supabase.rpc("book_appointment", {
+
+    // 3) Validación
+    if (!name || !lastName || !phone || !email || !service || !date || !time) {
+      setAlert("Completa nombre, apellidos, teléfono, email, servicio, día y hora.", "bad");
+      return;
+    }
+
+    // 4) Duración (ya lo tienes)
+    const duration = getServiceDuration(service);
+
+    // 5) Guardar en Supabase (IMPORTANTE: await + capturar error)
+    const { data, error } = await supabase.rpc("book_appointment", {
       p_name: name,
       p_last_name: lastName,
       p_email: email,
       p_phone: phone,
-      p_date: selectedDate,  // IMPORTANTE: p_date, no p_day
-      p_time: selectedTime,
+      p_date: date,
+      p_time: time,
       p_service: service,
       p_duration: duration,
-      p_notes: notes
+      p_notes: notes || null,
     });
 
-
     if (error) {
-      setAlert("Error guardando en BD: " + error.message, "bad");
-      return null;
+      setAlert("Error al guardar en BD: " + error.message, "bad");
+      console.error(error);
+      return;
     }
     if (!data?.[0]?.ok) {
-      setAlert(data?.[0]?.message || "No se pudo guardar.", "bad");
-      return null;
+      setAlert(data?.[0]?.message || "No se pudo guardar la cita.", "bad");
+      return;
     }
-    return data?.[0]?.id || null;
+
+    setAlert("Cita guardada ✅", "ok");
   }
+
 
   form?.addEventListener("submit", async (e) => {
     e.preventDefault();

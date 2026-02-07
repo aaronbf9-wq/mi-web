@@ -1022,6 +1022,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // =====================
   async function createInDB(appt) {
     const selectedTime = timeSelect.value;
+    const service = serviceSelect.value;
+    const duration = getServiceDuration(service);   // o SERVICE_META[service].duration
     supabase.rpc("book_appointment", {
       p_name: name,
       p_last_name: lastName,

@@ -1069,6 +1069,30 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     setAlert("Cita guardada ✅", "ok");
+    const dbId = data?.[0]?.id || null;
+
+    const appt = {
+      id: (crypto?.randomUUID ? crypto.randomUUID() : String(Date.now())),
+      db_id: dbId,                 // para poder “anular” también en BD
+      name,
+      lastName,
+      phone,
+      email,
+      service,
+      notes,
+      date,
+      time,
+      duration,
+      price: getServicePrice(service),
+      createdAt: new Date().toISOString(),
+    };
+
+    const list = loadAppointments();
+    list.push(appt);
+    saveAppointments(list);
+
+    renderAppointments();          // <- esto hace que salgan y aparezca “Anular”
+
   }
 
 

@@ -1021,17 +1021,18 @@ document.addEventListener("DOMContentLoaded", () => {
   // Submit booking
   // =====================
   async function createInDB(appt) {
-    const { data, error } = await db.rpc("create_appointment", {
-      p_day: appt.date,
-      p_time: appt.time,
-      p_name: appt.name,
-      p_last_name: appt.last_name,
-      p_phone: appt.phone,
-      p_email: appt.email,
-      p_service: appt.service,
-      p_duration: appt.duration,
-      p_notes: appt.notes,
+    supabase.rpc("book_appointment", {
+      p_name: name,
+      p_last_name: lastName,
+      p_email: email,
+      p_phone: phone,
+      p_date: selectedDate,  // IMPORTANTE: p_date, no p_day
+      p_time: selectedTime,
+      p_service: service,
+      p_duration: duration,
+      p_notes: notes
     });
+
 
     if (error) {
       setAlert("Error guardando en BD: " + error.message, "bad");
